@@ -107,3 +107,5 @@ $('#nav').replaceChildren(...NAV.map(([v,i,t])=>el('button',{class:S.v==v?'on':'
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState=='visible'&&S.v=='live'&&'wakeLock'in navigator)try{wl=await navigator.wakeLock.request('screen')}catch{}});
 if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
 all().then(u=>{S.units=u;return allK()}).then(k=>{k.forEach(r=>S.k[r.id]=r);render()});
+
+['gesturestart','gesturechange','dblclick'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));

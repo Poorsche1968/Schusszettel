@@ -30,3 +30,5 @@ canvas{display:block;margin:auto;touch-action:none}
 .it{display:flex;justify-content:space-between;padding:10px 4px;border-bottom:1px solid #1d4a73}.it small{color:var(--m);display:block}
 .warn{background:#5a4a12;border-radius:12px;padding:12px;margin-bottom:12px}
 @media print{#hd,#nav,.keys,.np{display:none!important}body{background:#fff;color:#000}.box,.card{background:#fff;border:1px solid #999}}
+html,body,button,label,div{touch-action:manipulation}
+canvas{touch-action:none}
