@@ -11,8 +11,8 @@ const badge=s=>el('span',{class:'b',style:`background:${COL[s.v]};${s.v>=3&&s.v<
 const vib=()=>navigator.vibrate&&navigator.vibrate(12);
 const ld=(d=new Date())=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'),today=()=>ld();
 const fmt=d=>d.split('-').reverse().join('.');
-let S={v:'home',k:{},units:[],u:null,p:0,z:1,f:'all',rf:0,fx:0,fy:0},wl=null,tm=null;
-const N={type:'Training',place:'Freiluft',R:1,P:6,A:6,mode:1,face:122,dist:70,bow:'Recurve',date:today(),wx:'',wind:'',temp:20,zone:8};
+let S={v:'home',k:{},units:[],u:null,p:0,z:1,f:'all',rf:0,fx:0,fy:0},wl=null,tEnd=0,tIv=null,ac=null;
+const N={type:'Training',place:'Freiluft',R:1,P:6,A:6,mode:1,face:122,dist:70,bow:'Recurve',date:today(),wx:'',wind:'',temp:20,zone:8,loc:''};
 const shots=u=>(u.p||[]).flat(),sum=a=>a.reduce((s,x)=>s+x.v,0);
 const mx=u=>u.R*u.P*u.A*10;
 const tot=u=>u.mode>2?(u.sums||[]).reduce((a,b)=>a+(+b||0),0):sum(shots(u));
@@ -50,19 +50,22 @@ if(u.mode<3)box.append(el('button',{class:'s np',style:'width:100%;margin-bottom
 box.append(el('div',{class:'bar'},el('span',{},`Gesamt: ${sh} / ${t*u.A}`),el('span',{},`Passe ${S.p+1}/${t}: ${sum(u.p[S.p]||[])} / ${u.A*10}`)));
 if(u.mode==1){box.append(gfx(u,box),el('div',{class:'bar',style:'margin-top:8px'},el('button',{class:'s',onclick:()=>{S.z=Math.max(1,S.z-.5);S.fx=S.fy=0;render()}},'Zoom −'),el('span',{},`Zoom: ${Math.round((S.z-1)*100)} %`),el('button',{class:'s',onclick:()=>{S.z=Math.min(4,S.z+.5);render()}},'Zoom +')));}
 if(u.mode==2){const a=el('div',{class:'keys'});KEYS.forEach(k=>a.append(el('button',{style:`background:${KC[k]};color:${[4,3,8,7,6,5].includes(k)?'#fff':'#000'}`,onclick:async()=>{const p=u.p[S.p]=u.p[S.p]||[];if(p.length>=u.A)return;p.push({v:k=='X'?10:k=='M'?0:+k,x:k=='X'?1:0});vib();if(p.length>=u.A&&S.p<t-1)S.p++;await save(u);render()}},k)));
-a.append(el('button',{style:'background:#e8f1fa;color:#000',onclick:tmr},'⏱'),el('button',{style:'grid-column:span 3;background:#4a8acf;color:#fff',onclick:async()=>{const p=u.p[S.p]||[];if(!p.length&&S.p>0){S.p--;u.p[S.p].pop()}else p.pop();await save(u);render()}},'⌫ Löschen'));box.append(sheet(u),a);$('#app').className='k';return}
+a.append(el('button',{style:'background:#e8f1fa;color:#000',onclick:tmr},tEnd?'⏹':'⏱'),el('button',{style:'grid-column:span 3;background:#4a8acf;color:#fff',onclick:async()=>{const p=u.p[S.p]||[];if(!p.length&&S.p>0){S.p--;u.p[S.p].pop()}else p.pop();await save(u);render()}},'⌫ Löschen'));box.append(sheet(u),a);$('#app').className='k';return}
 if(u.mode==1)box.append(sheet(u));else box.append(sheet(u));
-if(u.mode<3)box.append(el('div',{class:'g',style:'margin-top:8px'},el('button',{class:'s',disabled:S.p==0,onclick:()=>{S.p--;S.fx=S.fy=0;render()}},'Zurück'),el('button',{class:'s',onclick:tmr},'⏱'),el('button',{class:'s',onclick:()=>{S.p<t-1?(S.p++,S.fx=S.fy=0,render()):go('sheet')}},S.p<t-1?'Weiter':'Fertig')))}
-function tmr(){if(tm){clearInterval(tm);tm=null;render();return}let s=120;tm=setInterval(()=>{s--;$('#hd').textContent=`⏱ ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;if(s==10)navigator.vibrate&&navigator.vibrate([200,100,200]);if(s<=0){clearInterval(tm);tm=null;navigator.vibrate&&navigator.vibrate(600);render()}},1000)}
+if(u.mode<3)box.append(el('div',{class:'g',style:'margin-top:8px'},el('button',{class:'s',disabled:S.p==0,onclick:()=>{S.p--;S.fx=S.fy=0;render()}},'Zurück'),el('button',{class:'s',onclick:tmr},tEnd?'⏹':'⏱'),el('button',{class:'s',onclick:()=>{S.p<t-1?(S.p++,S.fx=S.fy=0,render()):go('sheet')}},S.p<t-1?'Weiter':'Fertig')))}
+const left=()=>Math.max(0,Math.ceil((tEnd-Date.now())/1000)),tt=()=>{const s=left();return `⏱ ${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`},hdc=()=>{const s=left();return s<=30?'#c8404a':s<=60?'#b8860b':'#0a3a63'};
+const beep=n=>{try{ac=ac||new(window.AudioContext||window.webkitAudioContext)();ac.resume&&ac.resume();for(let i=0;i<n;i++){const o=ac.createOscillator(),g=ac.createGain(),t=ac.currentTime+i*.3;o.frequency.value=880;o.connect(g);g.connect(ac.destination);g.gain.setValueAtTime(.4,t);o.start(t);o.stop(t+.18)}}catch{}};
+function tick(){if(!tEnd)return;const s=left();if(s<=0){tEnd=0;clearInterval(tIv);beep(3);navigator.vibrate&&navigator.vibrate(600);render();return}const h=$('#hd');h.textContent=tt();h.style.background=hdc();if(s==30&&tick.l!=30)beep(2);tick.l=s}
+function tmr(){if(tEnd){tEnd=0;clearInterval(tIv);render();return}const u=S.u;tEnd=Date.now()+(u&&u.A<=3?120:240)*1000;tick.l=0;beep(1);clearInterval(tIv);tIv=setInterval(tick,250);render()}
 /* Neue Einheit */
 const stp=(k,l,lo=1)=>el('div',{},el('label',{},l),el('div',{class:'st'},el('button',{class:'s',onclick:()=>{N[k]=Math.max(lo,N[k]-1);render()}},'−'),el('b',{},N[k]),el('button',{class:'s',onclick:()=>{N[k]++;render()}},'+')));
 const opt=(k,l,o)=>el('div',{},el('label',{},l),el('div',{class:'g'},o.map(([v,t])=>el('button',{class:'s'+(N[k]===v?' on':''),onclick:()=>{N[k]=v;if(k=='place')Object.assign(N,v=='Halle'?{face:40,dist:18,R:2,P:10,A:3}:{face:122,dist:70,R:1,P:6,A:6});render()}},t))));
 function neu(box){box.append(el('div',{class:'box'},opt('type','Art',[['Training','Training'],['Wettbewerb','Wettbewerb']]),opt('place','Ort',[['Freiluft','Freiluft'],['Halle','Halle']])),
-el('div',{class:'box'},el('h3',{},'Aufbau'),el('div',{class:'bar'},el('span',{},'Max. Punkte'),el('b',{},N.R*N.P*N.A*10)),el('div',{class:'g'},stp('R','Runden'),stp('P','Passen'),stp('A','Pfeile'))),
+N.type=='Wettbewerb'?el('div',{class:'box'},el('label',{style:'margin-top:0'},'Wettkampfort'),el('input',{type:'text',placeholder:'z. B. Göttingen, Schützenverein …',value:N.loc,oninput:e=>N.loc=e.target.value})):null,el('div',{class:'box'},el('h3',{},'Aufbau'),el('div',{class:'bar'},el('span',{},'Max. Punkte'),el('b',{},N.R*N.P*N.A*10)),el('div',{class:'g'},stp('R','Runden'),stp('P','Passen'),stp('A','Pfeile'))),
 el('div',{class:'box'},opt('mode','Eingabe',[[1,'Pfeile auf die Auflage ziehen'],[2,'Pfeil für Pfeil'],[3,'Summe je Passe'],[4,'Summe je Serie']]),opt('face','Auflage (Vollauflage)',[[122,'122 cm'],[80,'80 cm'],[40,'40 cm']]),
 el('label',{},'Distanz (m)'),el('input',{type:'number',value:N.dist,onchange:e=>N.dist=+e.target.value||N.dist}),opt('bow','Bogenklasse',[['Recurve','Recurve'],['Compound','Compound'],['Blank','Blank']]),el('label',{},'Datum'),el('input',{type:'date',value:N.date,onchange:e=>N.date=e.target.value})),
 el('div',{class:'box'},el('h3',{},'Bedingungen (optional)'),opt('wx','Wetter',[['sun','☀️'],['cloud','☁️'],['rain1','🌦'],['rain','🌧']]),opt('wind','Wind',[[0,'0'],[1,'leicht'],[2,'mittel'],[3,'stark']]),el('label',{},`Temperatur: ${N.temp} °C`),el('input',{type:'range',min:-10,max:45,value:N.temp,oninput:e=>{N.temp=+e.target.value;e.target.previousSibling.textContent=`Temperatur: ${N.temp} °C`}})),
-el('button',{class:'p',onclick:async()=>{const u={...N,id:Date.now(),title:`${N.type} · ${N.dist} m`,p:[],sums:[]};S.u=u;S.p=0;S.z=1;S.fx=S.fy=0;await save(u);go('live')}},'Einheit erstellen'))}
+el('button',{class:'p',onclick:async()=>{const u={...N,id:Date.now(),title:N.type=='Wettbewerb'&&N.loc?`${N.loc} · ${N.dist} m`:`${N.type} · ${N.dist} m`,p:[],sums:[]};S.u=u;S.p=0;S.z=1;S.fx=S.fy=0;await save(u);go('live')}},'Einheit erstellen'))}
 /* Start */
 const dl=(n,t)=>{const b=new Blob([t],{type:'application/json'}),f=new File([b],n,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]}))navigator.share({files:[f]}).catch(()=>{});else{const a=el('a',{href:URL.createObjectURL(b),download:n});a.click()}};
 const exp=()=>{localStorage.bk=Date.now();dl(`schusszettel-${today()}.json`,JSON.stringify({v:1,units:S.units,clicks:Object.values(S.k)}));render()};
@@ -70,7 +73,7 @@ function home(box){const bk=+localStorage.bk||0;if((S.units.length||Object.keys(
 box.append(el('div',{class:'g'},[['all','Alle'],['Halle','Halle'],['Freiluft','Freiluft']].map(([v,t])=>el('button',{class:'s'+(S.f==v?' on':''),onclick:()=>{S.f=v;render()}},t))));
 const us=S.units.filter(u=>S.f=='all'||u.place==S.f).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id),sh=us.flatMap(shots);
 if(!us.length)box.append(el('div',{class:'box'},'Noch keine Einheiten. Tippe auf „Neu“, um zu starten.'));else{box.append(el('div',{class:'box'},el('h3',{},'Trefferbild'),plot(sh),...charts(sh,[...us].reverse().filter(u=>done(u)).map(u=>Math.round(tot(u)/done(u)*10)/10))));
-box.append(el('div',{class:'box'},el('h3',{},'Einheiten'),us.map(u=>el('div',{class:'it',onclick:()=>{S.u=u;S.p=0;S.rf=0;go('sheet')}},el('div',{},u.title,el('small',{},`${fmt(u.date)} · ${u.place} · ${u.face} cm`)),el('b',{},`${tot(u)}/${mx(u)}`)))))}
+box.append(el('div',{class:'box'},el('h3',{},'Einheiten'),us.map(u=>el('div',{class:'it',onclick:()=>{S.u=u;S.p=0;S.rf=0;go('sheet')}},el('div',{},u.title,el('small',{},`${fmt(u.date)} · ${u.place} · ${u.face} cm${u.loc?' · '+u.loc:''}`)),el('b',{},`${tot(u)}/${mx(u)}`)))))}
 box.append(el('div',{class:'g np'},el('button',{class:'s',onclick:exp},'JSON sichern'),el('label',{class:'s',style:'text-align:center;margin:0;color:var(--t)'},'JSON laden',el('input',{type:'file',accept:'.json',style:'display:none',onchange:async e=>{try{const j=JSON.parse(await e.target.files[0].text());for(const u of j.units||[])await put(u);for(const r of j.clicks||[]){await putK(r);S.k[r.id]=r}S.units=await all();render()}catch{alert('Datei ungültig')}}}))))}
 /* Zettel-Ansicht */
 function zettel(box){const u=S.u;if(!u)return box.append('Keine Einheit gewählt.');const sh=shots(u),rs=[...Array(u.R)].map((_,r)=>r+1);
@@ -101,7 +104,8 @@ el('div',{class:'box'},el('h3',{},'Tage'),days.length?days.slice(0,31).map(d=>el
 /* Navigation */
 const NAV=[['home','🏠','Start'],['new','➕','Neu'],['live','🎯','Live'],['sheet','📋','Zettel'],['klick','🔢','Klicker']];
 async function go(v){if(v=='live'&&!S.u)v='new';S.v=v;if((v=='live'||v=='klick')&&'wakeLock'in navigator)try{wl=await navigator.wakeLock.request('screen')}catch{}else if(wl){wl.release();wl=null}render()}
-function render(){const a=$('#app');a.className='';a.innerHTML='';if(tm){}$('#hd').textContent={home:'Schusszettel',new:'Neue Einheit',live:S.u?S.u.title:'Live',sheet:'Zusammenfassung',photo:'Foto auswerten',klick:'Klicker'}[S.v];
+function render(){const a=$('#app');a.className='';a.innerHTML='';$('#hd').textContent={home:'Schusszettel',new:'Neue Einheit',live:S.u?S.u.title:'Live',sheet:'Zusammenfassung',photo:'Foto auswerten',klick:'Klicker'}[S.v];
+if(tEnd){$('#hd').textContent=tt();$('#hd').style.background=hdc()}else $('#hd').style.background='';
 $('#nav').replaceChildren(...NAV.map(([v,i,t])=>el('button',{class:S.v==v?'on':'',onclick:()=>go(v)},el('i',{},i),t)));
 ({home,new:neu,live:b=>S.u?live(S.u,b):neu(b),sheet:zettel,photo:b=>photo(S.u,b),klick})[S.v](a)}
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState=='visible'&&S.v=='live'&&'wakeLock'in navigator)try{wl=await navigator.wakeLock.request('screen')}catch{}});
