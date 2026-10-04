@@ -40,7 +40,7 @@ function gfx(u,box){const W=Math.min(innerWidth-24,460),[c,x]=cv(W,W);let drag=n
 const draw=()=>{x.clearRect(0,0,W,W);drawT(x,cx(),cy(),R());u.p.forEach((a,i)=>a.forEach(s=>{if(s.px==null)return;const cur=i==S.p;x.globalAlpha=cur?1:.35;x.fillStyle='#000';x.strokeStyle='#fff';x.lineWidth=2;x.beginPath();x.arc(cx()+s.px*R(),cy()+s.py*R(),cur?6:4,0,7);x.fill();x.stroke();x.globalAlpha=1;if(cur&&drag&&drag.s==s){x.fillStyle='#fff';x.strokeStyle='#000';x.lineWidth=3;x.font='bold 20px sans-serif';const t=s.x?'X':s.v||'M';x.strokeText(t,cx()+s.px*R()+10,cy()+s.py*R()-10);x.fillText(t,cx()+s.px*R()+10,cy()+s.py*R()-10)}}))};
 const pos=e=>{const b=c.getBoundingClientRect();return[(e.clientX-b.left)*W/b.width,(e.clientY-b.top)*W/b.width]};
 const mv=(s,q,dy)=>{s.px=(q[0]-cx())/R();s.py=(q[1]+dy-cy())/R();Object.assign(s,score(s.px,s.py,u))};
-c.onpointerdown=e=>{e.preventDefault();c.setPointerCapture(e.pointerId);const q=pos(e),a=pas();let s=a.find(s=>s.px!=null&&Math.hypot(cx()+s.px*R()-q[0],cy()+s.py*R()-q[1])<18);if(s)drag={s,dy:0};else if(a.length<u.A){s={};a.push(s);drag={s,dy:-44,n:1};mv(s,q,-44)}if(drag)draw()};
+c.className='tt';c.onpointerdown=e=>{e.preventDefault();c.setPointerCapture(e.pointerId);const q=pos(e),a=pas();let s=a.find(s=>s.px!=null&&Math.hypot(cx()+s.px*R()-q[0],cy()+s.py*R()-q[1])<18);if(s)drag={s,dy:0};else if(a.length<u.A){s={};a.push(s);drag={s,dy:-44,n:1};mv(s,q,-44)}if(drag)draw()};
 c.onpointermove=e=>{if(!drag)return;mv(drag.s,pos(e),drag.dy);draw()};
 c.onpointerup=async()=>{if(!drag)return;vib();S.fx=S.z>1?drag.s.px:0;S.fy=S.z>1?drag.s.py:0;drag=null;await save(u);render()};
 draw();return c}
@@ -84,7 +84,7 @@ if(!ph.img){box.append(el('div',{class:'box'},el('h3',{},'Foto der Scheibe'),el(
 const W=Math.min(innerWidth-24,460),H=Math.round(W*ph.img.height/ph.img.width),[c,x]=cv(W,H),pas=()=>u.p[S.p]=u.p[S.p]||[];
 const draw=()=>{x.drawImage(ph.img,0,0,W,H);x.strokeStyle='#0f0';x.lineWidth=2;if(ph.cx!=null){x.beginPath();x.arc(ph.cx,ph.cy,5,0,7);x.stroke()}if(ph.r){x.beginPath();x.arc(ph.cx,ph.cy,ph.r,0,7);x.stroke();x.globalAlpha=.4;for(let i=1;i<10;i++){x.beginPath();x.arc(ph.cx,ph.cy,ph.r*i/10,0,7);x.stroke()}x.globalAlpha=1}
 ph.dots.forEach(d=>{const X=ph.cx+d.px*ph.r,Y=ph.cy+d.py*ph.r;x.fillStyle='#f0f';x.beginPath();x.arc(X,Y,4,0,7);x.fill();x.fillStyle='#fff';x.strokeStyle='#000';x.lineWidth=3;x.font='bold 16px sans-serif';const l=d.x?'X':d.v||'M';x.strokeText(l,X+6,Y-6);x.fillText(l,X+6,Y-6)})};
-c.onpointerdown=async e=>{const b=c.getBoundingClientRect(),X=(e.clientX-b.left)*W/b.width,Y=(e.clientY-b.top)*W/b.width;
+c.className='tt';c.onpointerdown=async e=>{const b=c.getBoundingClientRect(),X=(e.clientX-b.left)*W/b.width,Y=(e.clientY-b.top)*W/b.width;
 if(ph.step==1){ph.cx=X;ph.cy=Y;ph.step=2;render()}else if(ph.step==2){ph.r=Math.hypot(X-ph.cx,Y-ph.cy);if(ph.r<20)return;ph.step=3;render()}
 else{if(pas().length>=u.A){if(S.p<t-1)S.p++;else return}const p=pas(),d={px:(X-ph.cx)/ph.r,py:(Y-ph.cy)/ph.r};Object.assign(d,score(d.px,d.py,u));p.push(d);ph.dots.push(d);vib();await save(u);render()}};
 draw();

@@ -25,10 +25,10 @@ input,select{width:100%;background:#0b2a47;color:var(--t);border:1px solid #2a5a
 .sep{height:10px;background:#0f2f4c;border-radius:5px;margin:6px 0}
 .keys{position:fixed;left:0;right:0;bottom:calc(56px + env(safe-area-inset-bottom));z-index:4;background:var(--h);padding:10px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-radius:16px 16px 0 0}
 .keys button{height:54px;border:0;border-radius:10px;font-size:22px;font-weight:700}
-canvas{display:block;margin:auto;touch-action:none}
+canvas{display:block;margin:auto;touch-action:pan-y}
 .bar{display:flex;justify-content:space-between;background:var(--c);border-radius:12px;padding:10px 14px;margin-bottom:8px}
 .it{display:flex;justify-content:space-between;padding:10px 4px;border-bottom:1px solid #1d4a73}.it small{color:var(--m);display:block}
 .warn{background:#5a4a12;border-radius:12px;padding:12px;margin-bottom:12px}
 @media print{#hd,#nav,.keys,.np{display:none!important}body{background:#fff;color:#000}.box,.card{background:#fff;border:1px solid #999}}
 html,body,button,label,div{touch-action:manipulation}
-canvas{touch-action:none}
+.tt{touch-action:none}
