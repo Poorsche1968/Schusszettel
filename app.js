@@ -88,19 +88,63 @@ function zettel(box){const u=S.u;if(!u)return box.append('Keine Einheit gewählt
 box.append(el('div',{class:'bar'},el('span',{},u.title),el('span',{},fmt(u.date))),cards(u),sheet(u));
 if(u.mode<3){const f=S.rf?(u.p.slice((S.rf-1)*u.P,S.rf*u.P)).flat():sh;box.append(el('div',{class:'box'},el('h3',{},'Trefferbild'),LY(u)=='single'?plot(f):plotL(u,f),el('div',{class:'g'},[0,...rs].map(r=>el('button',{class:'s'+(S.rf==r?' on':''),onclick:()=>{S.rf=r;render()}},r||'Alle'))),...charts(f,u.p.map(a=>sum(a)))));if(LY(u)!='single')box.append(spotStats(u,f))}
 box.append(el('div',{class:'g np'},el('button',{class:'s',onclick:()=>print()},'PDF / Drucken'),el('button',{class:'s',onclick:()=>{S.p=Math.max(0,u.p.findIndex(a=>a.length<u.A));S.p<0&&(S.p=0);go('live')}},'Weiter erfassen'),el('button',{class:'s',onclick:async()=>{if(confirm('Einheit löschen?')){await del(u.id);S.units=await all();S.u=null;go('home')}}},'Löschen')))}
-/* Foto-Auswertung (manuell, ohne OpenCV) */
+/* Foto-Auswertung: Kalibrierung per Antippen → automatische Pfeilerkennung → Kontrolle/Korrektur → Übernahme (ohne OpenCV) */
+const PH={dev:110,minCm:.8,maxDark:55,maxMask:.3}; /* Stellschrauben: dev = Farbabweichung (kleiner = empfindlicher), minCm = kleinste Pfeilspur in cm, maxDark = Mindesthelligkeit, maxMask = Warnschwelle bei unruhigem Bild */
+/* Erkennung: Pixel, die stark von der Median-Farbe ihres Rings abweichen, gelten als Pfeil. d=RGBA, M×h Pixel, Mitte X0/Y0, Radius R in Pixeln, face = Auflage in cm */
+function detCore(d,M,h,X0,Y0,R,face){const B=5,ch=[...Array(B)].map(()=>[[],[],[]]);let lum=0,n=0;
+for(let y=0;y<h;y+=2)for(let x=0;x<M;x+=2){const q=Math.hypot(x-X0,y-Y0)/R;if(q>.97)continue;const i=(y*M+x)*4,b=Math.min(B-1,q*B|0);for(let c=0;c<3;c++)ch[b][c].push(d[i+c]);lum+=d[i]+d[i+1]+d[i+2];n++}
+if(n<50)return{err:'Kalibrierung liegt nicht auf dem Foto – bitte neu kalibrieren'};
+if(lum/n/3<PH.maxDark)return{err:'Foto zu dunkel – bitte mit mehr Licht aufnehmen'};
+const med=ch.map(a=>a.map(v=>{v.sort((p,q)=>p-q);return v[v.length>>1]??0})),dv=(i,b)=>Math.abs(d[i]-med[b][0])+Math.abs(d[i+1]-med[b][1])+Math.abs(d[i+2]-med[b][2]),m=new Uint8Array(M*h);let cnt=0;
+for(let y=0;y<h;y++)for(let x=0;x<M;x++){const q=Math.hypot(x-X0,y-Y0)/R;if(q>.97)continue;const i=(y*M+x)*4,b=Math.min(B-1,q*B|0),f=q*B-b;let e=dv(i,b);/* an Ringkanten auch Nachbarring zulassen */if(f<.08&&b>0)e=Math.min(e,dv(i,b-1));if(f>.92&&b<B-1)e=Math.min(e,dv(i,b+1));if(e>PH.dev){m[y*M+x]=1;cnt++}}
+/* Erosion 3×3 entfernt dünne Ringlinien, Pfeilspuren bleiben */
+const e=new Uint8Array(M*h);for(let y=1;y<h-1;y++)for(let x=1;x<M-1;x++){const i=y*M+x;if(m[i]&&m[i-1]&&m[i+1]&&m[i-M]&&m[i+M]&&m[i-M-1]&&m[i-M+1]&&m[i+M-1]&&m[i+M+1])e[i]=1}
+/* zusammenhängende Flächen = Pfeile; Mindestgröße skaliert mit der Auflage */
+const mn=Math.max(8,(PH.minCm/(face/2)*R)**2*.5),cs=[];
+for(let s=0;s<e.length;s++)if(e[s]==1){const st=[s],p=[];let a=0,sx=0,sy=0;e[s]=2;while(st.length){const i=st.pop();p.push(i);a++;sx+=i%M;sy+=i/M|0;for(const j of[i-1,i+1,i-M,i+M])if(e[j]==1){e[j]=2;st.push(j)}}if(a>=mn)cs.push({a,x:sx/a,y:sy/a,p})}
+const ar=cs.map(c=>c.a).sort((p,q)=>p-q),md=ar[ar.length>>1]||1;
+return{hits:cs.map(c=>{const k=c.a>=md*2.5?'big':c.a<=md*.4?'small':'';return{px:(c.x-X0)/R,py:(c.y-Y0)/R,k,pts:k=='big'?c.p.filter((_,j)=>j%4==0).map(i=>[(i%M-X0)/R,((i/M|0)-Y0)/R]):null}}),warn:cnt/(Math.PI*R*R)>PH.maxMask?'Viele auffällige Bereiche (Licht/Schatten?) – bitte alle Punkte genau prüfen':''}}
+function detect(img,cx,cy,r,W,face){const M=Math.min(800,img.width),h=Math.round(M*img.height/img.width),k=M/W,c=document.createElement('canvas');c.width=M;c.height=h;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,M,h);return detCore(g.getImageData(0,0,M,h).data,M,h,cx*k,cy*k,r*k,face)}
+/* Automatische Scheibenerkennung: Gold = größte gelbe Fläche, äußerer Rand des blauen Rings (=0,6 R) aus dem Radialprofil */
+function hue(r,g,b){const mx=Math.max(r,g,b),dd=mx-Math.min(r,g,b);if(dd<50||mx<90)return -1;return 60*(mx==r?((g-b)/dd+6)%6:mx==g?(b-r)/dd+2:(r-g)/dd+4)}
+function autoCal(d,M,h){const N=M*h,cl=new Uint8Array(N),sn=new Uint8Array(N);let best=null;for(let i=0;i<N;i++){const H=hue(d[i*4],d[i*4+1],d[i*4+2]);cl[i]=H<0?0:H>=35&&H<=70?1:H<=15||H>=345?2:H>=170&&H<=210?3:0}
+for(let s=0;s<N;s++)if(cl[s]==1&&!sn[s]){const st=[s];sn[s]=1;let a=0,sx=0,sy=0;while(st.length){const i=st.pop();a++;sx+=i%M;sy+=i/M|0;for(const j of[i-1,i+1,i-M,i+M])if(j>=0&&j<N&&cl[j]==1&&!sn[j]){sn[j]=1;st.push(j)}}if(!best||a>best.a)best={a,x:sx/a,y:sy/a}}
+if(!best||best.a<30)return null;const D=Math.round(Math.min(M,h)*.6),n=new Float32Array(D+2),ry=Math.sqrt(best.a/Math.PI);
+for(let i=0;i<N;i++)if(cl[i]==3){const q=Math.round(Math.hypot(i%M-best.x,(i/M|0)-best.y));if(q<=D)n[q]++}
+const f=q=>n[q]/(2*Math.PI*Math.max(q,1)),s=q=>(f(q-1)+f(q)+f(q+1))/3;let q=Math.ceil(ry*1.5),on=0;for(;q<D;q++){if(!on&&s(q)>.5)on=1;else if(on&&s(q)<.25)break}
+if(!on||q>=D)return null;const R=q/.6;if(ry<R*.1||ry>R*.26)return null;
+let sx=0,sy=0,c=0;for(let i=0;i<N;i++)if(cl[i]&&Math.hypot(i%M-best.x,(i/M|0)-best.y)<q*1.02){sx+=i%M;sy+=i/M|0;c++}return{cx:sx/c,cy:sy/c,r:R}}
+function autoCalImg(img,W){const M=Math.min(800,img.width),h=Math.round(M*img.height/img.width),c=document.createElement('canvas');c.width=M;c.height=h;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,M,h);const r=autoCal(g.getImageData(0,0,M,h).data,M,h);return r&&{cx:r.cx*W/M,cy:r.cy*W/M,r:r.r*W/M}}
+/* k-Means: teilt eine zusammengewachsene Fläche in n Pfeile */
+function km(p,n){let c=[p[0]];while(c.length<n){let b=p[0],bd=-1;for(const q of p){const m=Math.min(...c.map(z=>Math.hypot(q[0]-z[0],q[1]-z[1])));if(m>bd){bd=m;b=q}}c.push(b)}
+for(let t=0;t<10;t++){const g=c.map(()=>[0,0,0]);for(const q of p){let bi=0,bd=1e9;c.forEach((z,i)=>{const m=Math.hypot(q[0]-z[0],q[1]-z[1]);if(m<bd){bd=m;bi=i}});g[bi][0]+=q[0];g[bi][1]+=q[1];g[bi][2]++}c=g.map((s,i)=>s[2]?[s[0]/s[2],s[1]/s[2]]:c[i])}return c}
+const WD=()=>Math.min(innerWidth-24,460),mk=(u,px,py,c)=>({px,py,c,...score(px,py,u)});
+/* Erkennung ausführen: unsichere Treffer wandern in die Rückfrage-Liste ph.q */
+function runDet(u,ph,W){const r=detect(ph.img,ph.cx,ph.cy,ph.r,W,u.face);ph.q=[];ph.sel=null;ph.msg=r.err||r.warn||'';ph.cand=(r.hits||[]).map(q=>{const d=mk(u,q.px,q.py,q.k?.4:1);if(q.k)ph.q.push({d,k:q.k,pts:q.pts});return d})}
+const sure=(u,ph)=>!ph.q.length&&ph.cand.length==u.A&&!ph.msg;
+/* Übernehmen: nach Wert absteigend in die aktuelle und folgende Passen schreiben */
+async function commit(u,ph){const t=u.R*u.P,pas=()=>u.p[S.p]=u.p[S.p]||[],a=[...ph.cand].sort((p,q)=>q.v-p.v||q.x-p.x);let skip=0;for(const d of a){let p=pas();if(p.length>=u.A){if(S.p<t-1){S.p++;p=pas()}else{skip++;continue}}p.push({px:d.px,py:d.py,v:d.v,x:d.x})}await save(u);S.ph=null;if(skip)alert(skip+' Pfeil(e) passten nicht mehr in die Einheit und wurden nicht übernommen.');go('live')}
 function photo(u,box){if(!u||u.mode>2||LY(u)!='single')return box.append(el('div',{class:'box'},'Foto-Auswertung gibt es nur bei Vollauflagen und den Modi „Auflage“ und „Pfeil für Pfeil“.'));
-const ph=S.ph=S.ph||{step:0,dots:[]},t=u.R*u.P;
-if(!ph.img){box.append(el('div',{class:'box'},el('h3',{},'Foto der Scheibe'),el('p',{},'Fotografiere die Scheibe möglichst frontal und füllend.'),el('input',{type:'file',accept:'image/*',onchange:e=>{const f=e.target.files[0];if(!f)return;const i=new Image();i.onload=()=>{ph.img=i;ph.step=1;render()};i.src=URL.createObjectURL(f)}})),el('button',{class:'s',onclick:()=>go('live')},'Zurück'));return}
-const W=Math.min(innerWidth-24,460),H=Math.round(W*ph.img.height/ph.img.width),[c,x]=cv(W,H),pas=()=>u.p[S.p]=u.p[S.p]||[];
+const ph=S.ph=S.ph||{step:0,cand:[],q:[]};
+if(!ph.img){box.append(el('div',{class:'box'},el('h3',{},'Foto der Scheibe'),el('p',{},'Ein Foto genügt: Scheibe möglichst frontal, gleichmäßig beleuchtet und füllend. Scheibe und Pfeile werden automatisch erkannt.'),el('input',{type:'file',accept:'image/*',onchange:e=>{const f=e.target.files[0];if(!f)return;const i=new Image();i.onload=()=>{ph.img=i;const W=WD(),r=autoCalImg(i,W);if(r){Object.assign(ph,r,{step:3});runDet(u,ph,W);if(sure(u,ph))return commit(u,ph)}else{ph.step=1;ph.msg='Scheibe nicht sicher erkannt – bitte Mitte und Rand antippen'}render()};i.src=URL.createObjectURL(f)}})),el('button',{class:'s',onclick:()=>go('live')},'Zurück'));return}
+const W=WD(),H=Math.round(W*ph.img.height/ph.img.width),[c,x]=cv(W,H),pos=e=>{const b=c.getBoundingClientRect();return[(e.clientX-b.left)*W/b.width,(e.clientY-b.top)*W/b.width]};let dr=null;
 const draw=()=>{x.drawImage(ph.img,0,0,W,H);x.strokeStyle='#0f0';x.lineWidth=2;if(ph.cx!=null){x.beginPath();x.arc(ph.cx,ph.cy,5,0,7);x.stroke()}if(ph.r){x.beginPath();x.arc(ph.cx,ph.cy,ph.r,0,7);x.stroke();x.globalAlpha=.4;for(let i=1;i<10;i++){x.beginPath();x.arc(ph.cx,ph.cy,ph.r*i/10,0,7);x.stroke()}x.globalAlpha=1}
-ph.dots.forEach(d=>{const X=ph.cx+d.px*ph.r,Y=ph.cy+d.py*ph.r;x.fillStyle='#f0f';x.beginPath();x.arc(X,Y,4,0,7);x.fill();x.fillStyle='#fff';x.strokeStyle='#000';x.lineWidth=3;x.font='bold 16px sans-serif';const l=d.x?'X':d.v||'M';x.strokeText(l,X+6,Y-6);x.fillText(l,X+6,Y-6)})};
-c.className='tt';c.onpointerdown=async e=>{const b=c.getBoundingClientRect(),X=(e.clientX-b.left)*W/b.width,Y=(e.clientY-b.top)*W/b.width;
-if(ph.step==1){ph.cx=X;ph.cy=Y;ph.step=2;render()}else if(ph.step==2){ph.r=Math.hypot(X-ph.cx,Y-ph.cy);if(ph.r<20)return;ph.step=3;render()}
-else{if(pas().length>=u.A){if(S.p<t-1)S.p++;else return}const p=pas(),d={px:(X-ph.cx)/ph.r,py:(Y-ph.cy)/ph.r};Object.assign(d,score(d.px,d.py,u));p.push(d);ph.dots.push(d);vib();await save(u);render()}};
-draw();
-const msg=['','1/3: Tippe auf die Mitte der Scheibe','2/3: Tippe auf den äußeren Rand (Ring 1)',`3/3: Tippe auf jeden Einschuss · Passe ${S.p+1}: ${(u.p[S.p]||[]).length}/${u.A}`][ph.step];
-box.append(el('div',{class:'bar'},msg),c,el('div',{class:'g',style:'margin-top:8px'},el('button',{class:'s',onclick:()=>{ph.cx=ph.r=null;ph.step=1;render()}},'Neu kalibrieren'),el('button',{class:'s',onclick:async()=>{const d=ph.dots.pop();if(d){u.p.forEach(a=>{const i=a.indexOf(d);if(i>=0)a.splice(i,1)});await save(u);render()}}},'Rückgängig'),el('button',{class:'s',onclick:()=>{S.ph=null;go('live')}},'Fertig')))}
+ph.cand.forEach((d,i)=>{const X=ph.cx+d.px*ph.r,Y=ph.cy+d.py*ph.r;x.lineWidth=2;x.strokeStyle=i==ph.sel?'#fff':'#000';x.fillStyle=d.c<1?'#ff0':'#f0f';x.beginPath();x.arc(X,Y,6,0,7);x.fill();x.stroke();x.fillStyle='#fff';x.strokeStyle='#000';x.lineWidth=3;x.font='bold 16px sans-serif';const l=(i+1)+': '+(d.x?'X':d.v||'M');x.strokeText(l,X+8,Y-8);x.fillText(l,X+8,Y-8)})};
+c.className='tt';c.onpointerdown=e=>{e.preventDefault();c.setPointerCapture(e.pointerId);const[X,Y]=pos(e);
+if(ph.step==1){ph.cx=X;ph.cy=Y;ph.step=2;render()}else if(ph.step==2){ph.r=Math.hypot(X-ph.cx,Y-ph.cy);if(ph.r<20)return;ph.step=3;runDet(u,ph,W);render()}
+else{let i=ph.cand.findIndex(d=>Math.hypot(ph.cx+d.px*ph.r-X,ph.cy+d.py*ph.r-Y)<18);if(i<0){ph.cand.push(mk(u,(X-ph.cx)/ph.r,(Y-ph.cy)/ph.r,1));i=ph.cand.length-1;vib()}ph.sel=dr=i;draw()}};
+c.onpointermove=e=>{if(dr==null)return;const[X,Y]=pos(e);Object.assign(ph.cand[dr],mk(u,(X-ph.cx)/ph.r,(Y-ph.cy)/ph.r,1));draw()};
+c.onpointerup=()=>{if(dr!=null){dr=null;vib();render()}};
+const q=ph.step==3&&ph.q[0];if(q)ph.sel=ph.cand.indexOf(q.d);draw();
+const Bt=(l,f,k='s')=>el('button',{class:k,onclick:f},l),st3=ph.step==3,info=st3?`Erkannt: ${ph.cand.length} von ${u.A} erwarteten Pfeilen · Passe ${S.p+1}`:['','1/3: Tippe auf die Mitte der Scheibe','2/3: Tippe auf den äußeren Rand (Ring 1)'][ph.step];
+/* Rückfrage bei unsicheren Treffern: Ausschnitt vergrößert zeigen */
+const ans=f=>()=>{f();ph.q.shift();if(sure(u,ph))return commit(u,ph);render()},del=()=>ph.cand.splice(ph.cand.indexOf(q.d),1),
+crop=d=>{const[k,y]=cv(220,220),X=ph.cx+d.px*ph.r,Y=ph.cy+d.py*ph.r,hw=Math.max(.12*ph.r,24),s=ph.img.width/W;y.drawImage(ph.img,(X-hw)*s,(Y-hw)*s,2*hw*s,2*hw*s,0,0,220,220);y.strokeStyle='#f0f';y.lineWidth=2;y.beginPath();y.arc(110,110,8,0,7);y.stroke();return k},
+split=n=>ans(()=>{if(n==1)q.d.c=1;else ph.cand.splice(ph.cand.indexOf(q.d),1,...km(q.pts,n).map(z=>mk(u,z[0],z[1],1)))});
+box.append(el('div',{},q?el('div',{class:'box',style:'text-align:center'},el('h3',{},q.k=='big'?'Wie viele Pfeile stecken hier?':'Ist das ein Pfeil?'),crop(q.d),el('div',{class:'g'},q.k=='big'?[1,2,3].map(n=>Bt(n+(n>1?' Pfeile':' Pfeil'),split(n))):[Bt('Ja, Pfeil',ans(()=>q.d.c=1)),Bt('Nein',ans(del))])):null,
+el('div',{class:'bar'},info),ph.msg?el('div',{class:'warn'},ph.msg):null,c,st3?el('p',{style:'color:var(--m);font-size:13px'},'Gelb = unsicher. Punkt ziehen = verschieben, leere Stelle tippen = Pfeil ergänzen. Fehlen Pfeile, bitte nachtragen.'):null,
+st3?el('div',{class:'g'},Bt('Neu erkennen',()=>{runDet(u,ph,W);render()}),Bt('Punkt löschen',()=>{if(ph.sel!=null){ph.cand.splice(ph.sel,1);ph.sel=null;render()}}),Bt('Neu kalibrieren',()=>{ph.cx=ph.r=null;ph.cand=[];ph.q=[];ph.msg='';ph.step=1;render()})):null,
+st3?Bt(`✔ ${ph.cand.length} Treffer übernehmen`,()=>commit(u,ph),'p'):null,el('div',{class:'g',style:'margin-top:8px'},Bt('Abbrechen',()=>{S.ph=null;go('live')}))))}
 /* Klicker: zählt geschossene Pfeile pro Tag und Uhrzeit */
 function clk(d){const k=ld(),r=S.k[k]=S.k[k]||{id:k,n:0,h:Array(24).fill(0),l:[]};if(d>0)for(let i=0;i<d;i++){const h=new Date().getHours();r.n++;r.h[h]++;r.l.push(h)}else if(r.n>0){const h=r.l.pop();r.n--;if(h!=null)r.h[h]--}vib();putK(r);render()}
 function bar2(v,l,col,ev=1){const[c,x]=cv(340,170),m=Math.max(1,...v),w=340/v.length;v.forEach((n,i)=>{const h=n/m*110;x.fillStyle=col;x.beginPath();x.roundRect(i*w+2,135-h,w-4,h,4);x.fill();x.fillStyle='#e8f1fa';x.font='10px sans-serif';x.textAlign='center';if(n&&w>14)x.fillText(n,i*w+w/2,130-h);if(i%ev==0)x.fillText(l[i],i*w+w/2,155)});return c}
