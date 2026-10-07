@@ -56,6 +56,7 @@ const KEYS=['X',10,9,8,7,6,5,4,3,2,1,'M'],KC={X:'#e6dc2a',10:'#e6dc2a',9:'#e6dc2
 function live(u,box){const t=u.R*u.P,sh=shots(u).length;
 if(u.mode<3&&LY(u)=='single')box.append(el('button',{class:'s np',style:'width:100%;margin-bottom:8px',onclick:()=>{S.ph=null;go('photo')}},'📷 Foto auswerten'));
 box.append(el('div',{class:'bar'},el('span',{},`Gesamt: ${sh} / ${t*u.A}`),el('span',{},`Passe ${S.p+1}/${t}: ${sum(u.p[S.p]||[])} / ${u.A*10}`)));
+if(u.mode<3)box.append(el('div',{class:'g np',style:'margin:-4px 0 8px'},el('button',{class:'s',disabled:S.p==0,onclick:()=>{S.p--;S.fx=S.fy=0;render()}},'◀ Zurück'),el('button',{class:'s',disabled:S.p>=t-1,onclick:()=>{S.p++;S.fx=S.fy=0;render()}},'Vor ▶')));
 if(u.mode==1){box.append(gfx(u,box),el('div',{class:'bar',style:'margin-top:8px'},el('button',{class:'s',onclick:()=>{S.z=Math.max(1,S.z-.5);S.fx=S.fy=0;render()}},'Zoom −'),el('span',{},`Zoom: ${Math.round((S.z-1)*100)} %`),el('button',{class:'s',onclick:()=>{S.z=Math.min(4,S.z+.5);render()}},'Zoom +')));}
 if(u.mode==2){const a=el('div',{class:'keys'});if(LY(u)!='single')a.append(el('div',{style:'grid-column:1/-1;display:flex;gap:8px'},lay(u).n.map((n,i)=>el('button',{style:`flex:1;height:40px;border:0;border-radius:10px;font-weight:700;background:${(S.sp||0)==i?'#fff':'#2a5a8a'};color:${(S.sp||0)==i?'#000':'#fff'}`,onclick:()=>{S.sp=i;render()}},n))));KEYS.forEach(k=>a.append(el('button',{style:`background:${KC[k]};color:${[4,3,8,7,6,5].includes(k)?'#fff':'#000'}`,onclick:async()=>{const p=u.p[S.p]=u.p[S.p]||[];if(p.length>=u.A)return;p.push({v:k=='X'?10:k=='M'?0:+k,x:k=='X'?1:0,sp:S.sp||0});if(LY(u)!='single')S.sp=((S.sp||0)+1)%lay(u).n.length;vib();if(p.length>=u.A&&S.p<t-1)S.p++;await save(u);render()}},k)));
 a.append(el('button',{style:'background:#e8f1fa;color:#000',onclick:tmr},tEnd?'⏹':'⏱'),el('button',{style:'grid-column:span 3;background:#4a8acf;color:#fff',onclick:async()=>{const p=u.p[S.p]||[];let d;if(!p.length&&S.p>0){S.p--;d=u.p[S.p].pop()}else d=p.pop();if(d&&LY(u)!='single')S.sp=d.sp||0;await save(u);render()}},'⌫ Löschen'));box.append(sheet(u),a);$('#app').className='k';return}
@@ -104,11 +105,28 @@ const mn=Math.max(8,(PH.minCm/(face/2)*R)**2*.5),cs=[];
 for(let s=0;s<e.length;s++)if(e[s]==1){const st=[s],p=[];let a=0,sx=0,sy=0;e[s]=2;while(st.length){const i=st.pop();p.push(i);a++;sx+=i%M;sy+=i/M|0;for(const j of[i-1,i+1,i-M,i+M])if(e[j]==1){e[j]=2;st.push(j)}}if(a>=mn)cs.push({a,x:sx/a,y:sy/a,p})}
 const ar=cs.map(c=>c.a).sort((p,q)=>p-q),md=ar[ar.length>>1]||1;
 return{hits:cs.map(c=>{const k=c.a>=md*2.5?'big':c.a<=md*.4?'small':'';return{px:(c.x-X0)/R,py:(c.y-Y0)/R,k,pts:k=='big'?c.p.filter((_,j)=>j%4==0).map(i=>[(i%M-X0)/R,((i/M|0)-Y0)/R]):null}}),warn:cnt/(Math.PI*R*R)>PH.maxMask?'Viele auffällige Bereiche (Licht/Schatten?) – bitte alle Punkte genau prüfen':''}}
-function detect(img,cx,cy,r,W,face){const M=Math.min(800,img.width),h=Math.round(M*img.height/img.width),k=M/W,c=document.createElement('canvas');c.width=M;c.height=h;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,M,h);return detCore(g.getImageData(0,0,M,h).data,M,h,cx*k,cy*k,r*k,face)}
+/* Pfeilerkennung v2: bunte Nocken/Befiederung (passen nicht zur Ringfarbe) finden, dann dem dunklen Schaft bis zum Einstich folgen */
+function detArr(d,M,h,X0,Y0,R,face){const N=M*h,m=new Uint8Array(N),ok=[H=>H>=28&&H<=72,H=>H<=28||H>=345,H=>H>=170&&H<=230,()=>0,()=>0],lum=i=>.299*d[i*4]+.587*d[i*4+1]+.114*d[i*4+2];
+for(let y=0;y<h;y++)for(let x=0;x<M;x++){const q=Math.hypot(x-X0,y-Y0)/R;if(q>1.02)continue;const i=y*M+x;if(Math.max(d[i*4],d[i*4+1],d[i*4+2])<120)continue;const H=hue(d[i*4],d[i*4+1],d[i*4+2]);if(H<0)continue;const b=Math.min(4,q*5|0),f=q*5-b;if(f<.05||f>.95||ok[b](H))continue;if(b>2&&Math.max(d[i*4],d[i*4+1],d[i*4+2])-Math.min(d[i*4],d[i*4+1],d[i*4+2])<100)continue;m[i]=1}
+const e2=new Uint8Array(N);for(let y=1;y<h-1;y++)for(let x=1;x<M-1;x++){const i=y*M+x;e2[i]=m[i]&&m[i-1]&&m[i+1]&&m[i-M]&&m[i+M]?1:0}m.set(e2);
+const sn=new Uint8Array(N),E=[];
+const tr=(cx,cy,ux,uy,t0)=>{const L=(px,py)=>{const xx=Math.round(px),yy=Math.round(py);return xx>=0&&yy>=0&&xx<M&&yy<h?lum(yy*M+xx):255};let last=null,g=0;for(let k=0,t=t0;k<260;k++,t+=1.5){const x=cx+ux*t,y=cy+uy*t;const c0=Math.min(L(x,y),L(x-uy,y+ux),L(x+uy,y-ux)),dk=c0<110&&c0<Math.min(L(x-uy*6,y+ux*6),L(x+uy*6,y-ux*6))-35;if(dk){last=[x,y,t];g=0}else if(++g>(last?9:14))break}return last};
+for(let s0=0;s0<N;s0++)if(m[s0]&&!sn[s0]){const st=[s0],p=[];sn[s0]=1;while(st.length){const i=st.pop();p.push(i);for(const j of[i-1,i+1,i-M,i+M])if(j>=0&&j<N&&m[j]&&!sn[j]){sn[j]=1;st.push(j)}}
+if(p.length<6)continue;let mx=0,my=0;for(const i of p){mx+=i%M;my+=i/M|0}mx/=p.length;my/=p.length;let sxx=0,syy=0,sxy=0;for(const i of p){const a=i%M-mx,c=(i/M|0)-my;sxx+=a*a;syy+=c*c;sxy+=a*c}
+const th=.5*Math.atan2(2*sxy,sxx-syy);let best=null;
+for(const sg of[1,-1]){const ux=Math.cos(th)*sg,uy=Math.sin(th)*sg;let ex=0;for(const i of p)ex=Math.max(ex,(i%M-mx)*ux+((i/M|0)-my)*uy);const r=tr(mx,my,ux,uy,ex+2);if(r&&(!best||r[2]>best[2]))best=r}
+E.push(best&&best[2]>8?{x:best[0],y:best[1],u:0,s:best[2]}:{x:mx,y:my,u:1})}
+/* doppelte Einstiche zusammenfassen */
+const out=[];for(const e of E){if(Math.hypot(e.x-X0,e.y-Y0)>1.03*R)continue;const o=out.find(z=>Math.hypot(z.x-e.x,z.y-e.y)<Math.max(7,R*.02));if(o){if(o.u&&!e.u)Object.assign(o,e)}else out.push(e)}
+return{hits:out.map(e=>({px:(e.x-X0)/R,py:(e.y-Y0)/R,k:e.u?'small':'',pts:null,s:e.s||0})),warn:out.length>25?'Sehr viele auffällige Bereiche – bitte alle Punkte genau prüfen':''}}
+function detect(img,cx,cy,r,W,face){const M=Math.min(800,img.width),h=Math.round(M*img.height/img.width),k=M/W,c=document.createElement('canvas');c.width=M;c.height=h;const g=c.getContext('2d',{willReadFrequently:true});g.drawImage(img,0,0,M,h);return detArr(g.getImageData(0,0,M,h).data,M,h,cx*k,cy*k,r*k,face)}
 /* Automatische Scheibenerkennung: Gold = größte gelbe Fläche, äußerer Rand des blauen Rings (=0,6 R) aus dem Radialprofil */
 function hue(r,g,b){const mx=Math.max(r,g,b),dd=mx-Math.min(r,g,b);if(dd<50||mx<90)return -1;return 60*(mx==r?((g-b)/dd+6)%6:mx==g?(b-r)/dd+2:(r-g)/dd+4)}
-function autoCal(d,M,h){const N=M*h,cl=new Uint8Array(N),sn=new Uint8Array(N);let best=null;for(let i=0;i<N;i++){const H=hue(d[i*4],d[i*4+1],d[i*4+2]);cl[i]=H<0?0:H>=35&&H<=70?1:H<=15||H>=345?2:H>=170&&H<=210?3:0}
-for(let s=0;s<N;s++)if(cl[s]==1&&!sn[s]){const st=[s];sn[s]=1;let a=0,sx=0,sy=0;while(st.length){const i=st.pop();a++;sx+=i%M;sy+=i/M|0;for(const j of[i-1,i+1,i-M,i+M])if(j>=0&&j<N&&cl[j]==1&&!sn[j]){sn[j]=1;st.push(j)}}if(!best||a>best.a)best={a,x:sx/a,y:sy/a}}
+function autoCal(d,M,h){const N=M*h,cl=new Uint8Array(N),sn=new Uint8Array(N);let best=null;for(let i=0;i<N;i++){const H=hue(d[i*4],d[i*4+1],d[i*4+2]);cl[i]=H<0?0:H>=35&&H<=70?1:H<=15||H>=345?2:H>=170&&H<=225?3:0}
+const T=(cx,cy,r,v)=>{let c=0;for(let t=0;t<24;t++){const x=Math.round(cx+r*Math.cos(t*Math.PI/12)),y=Math.round(cy+r*Math.sin(t*Math.PI/12));if(x>=0&&x<M&&y>=0&&y<h&&cl[y*M+x]==v)c++}return c/24};
+/* Gold = gelbe, runde Fläche, die von Rot und dann Blau umgeben ist (so wird gelbes Gras nicht verwechselt) */
+for(let s=0;s<N;s++)if(cl[s]==1&&!sn[s]){const st=[s];sn[s]=1;let a=0,x0=M,x1=0,y0=h,y1=0;while(st.length){const i=st.pop(),x=i%M,y=i/M|0;a++;if(x<x0)x0=x;if(x>x1)x1=x;if(y<y0)y0=y;if(y>y1)y1=y;for(const j of[i-1,i+1,i-M,i+M])if(j>=0&&j<N&&cl[j]==1&&!sn[j]){sn[j]=1;st.push(j)}}
+if(a<300)continue;const w=x1-x0+1,hh=y1-y0+1,as=w/hh;if(as<.6||as>1.7)continue;const rb=(w+hh)/4,mx=(x0+x1)/2,my=(y0+y1)/2,sc=T(mx,my,rb*1.5,2)+T(mx,my,rb*2.5,3);if(sc>(best?best.sc:.8))best={a:Math.PI*rb*rb,x:mx,y:my,sc}}
 if(!best||best.a<30)return null;const D=Math.round(Math.min(M,h)*.6),n=new Float32Array(D+2),ry=Math.sqrt(best.a/Math.PI);
 for(let i=0;i<N;i++)if(cl[i]==3){const q=Math.round(Math.hypot(i%M-best.x,(i/M|0)-best.y));if(q<=D)n[q]++}
 const f=q=>n[q]/(2*Math.PI*Math.max(q,1)),s=q=>(f(q-1)+f(q)+f(q+1))/3;let q=Math.ceil(ry*1.5),on=0;for(;q<D;q++){if(!on&&s(q)>.5)on=1;else if(on&&s(q)<.25)break}
@@ -120,8 +138,8 @@ function km(p,n){let c=[p[0]];while(c.length<n){let b=p[0],bd=-1;for(const q of 
 for(let t=0;t<10;t++){const g=c.map(()=>[0,0,0]);for(const q of p){let bi=0,bd=1e9;c.forEach((z,i)=>{const m=Math.hypot(q[0]-z[0],q[1]-z[1]);if(m<bd){bd=m;bi=i}});g[bi][0]+=q[0];g[bi][1]+=q[1];g[bi][2]++}c=g.map((s,i)=>s[2]?[s[0]/s[2],s[1]/s[2]]:c[i])}return c}
 const WD=()=>Math.min(innerWidth-24,460),mk=(u,px,py,c)=>({px,py,c,...score(px,py,u)});
 /* Erkennung ausführen: unsichere Treffer wandern in die Rückfrage-Liste ph.q */
-function runDet(u,ph,W){const r=detect(ph.img,ph.cx,ph.cy,ph.r,W,u.face);ph.q=[];ph.sel=null;ph.msg=r.err||r.warn||'';ph.cand=(r.hits||[]).map(q=>{const d=mk(u,q.px,q.py,q.k?.4:1);if(q.k)ph.q.push({d,k:q.k,pts:q.pts});return d})}
-const sure=(u,ph)=>!ph.q.length&&ph.cand.length==u.A&&!ph.msg;
+function runDet(u,ph,W){const r=detect(ph.img,ph.cx,ph.cy,ph.r,W,u.face);ph.q=[];ph.sel=null;ph.msg=r.err||r.warn||'';ph.cand=(r.hits||[]).sort((a,b)=>(b.s||0)-(a.s||0)).slice(0,u.A*2).map(q=>{const d=mk(u,q.px,q.py,q.k?.4:1);if(q.k)ph.q.push({d,k:q.k,pts:q.pts});return d})}
+const sure=(u,ph)=>false&&!ph.q.length&&ph.cand.length==u.A&&!ph.msg;
 /* Übernehmen: nach Wert absteigend in die aktuelle und folgende Passen schreiben */
 async function commit(u,ph){const t=u.R*u.P,pas=()=>u.p[S.p]=u.p[S.p]||[],a=[...ph.cand].sort((p,q)=>q.v-p.v||q.x-p.x);let skip=0;for(const d of a){let p=pas();if(p.length>=u.A){if(S.p<t-1){S.p++;p=pas()}else{skip++;continue}}p.push({px:d.px,py:d.py,v:d.v,x:d.x})}await save(u);S.ph=null;if(skip)alert(skip+' Pfeil(e) passten nicht mehr in die Einheit und wurden nicht übernommen.');go('live')}
 function photo(u,box){if(!u||u.mode>2||LY(u)!='single')return box.append(el('div',{class:'box'},'Foto-Auswertung gibt es nur bei Vollauflagen und den Modi „Auflage“ und „Pfeil für Pfeil“.'));
