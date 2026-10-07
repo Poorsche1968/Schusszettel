@@ -56,7 +56,6 @@ const KEYS=['X',10,9,8,7,6,5,4,3,2,1,'M'],KC={X:'#e6dc2a',10:'#e6dc2a',9:'#e6dc2
 function live(u,box){const t=u.R*u.P,sh=shots(u).length;
 if(u.mode<3&&LY(u)=='single')box.append(el('button',{class:'s np',style:'width:100%;margin-bottom:8px',onclick:()=>{S.ph=null;go('photo')}},'📷 Foto auswerten'));
 box.append(el('div',{class:'bar'},el('span',{},`Gesamt: ${sh} / ${t*u.A}`),el('span',{},`Passe ${S.p+1}/${t}: ${sum(u.p[S.p]||[])} / ${u.A*10}`)));
-if(u.mode<3)box.append(el('div',{class:'g np',style:'margin:-4px 0 8px'},el('button',{class:'s',disabled:S.p==0,onclick:()=>{S.p--;S.fx=S.fy=0;render()}},'◀ Zurück'),el('button',{class:'s',disabled:S.p>=t-1,onclick:()=>{S.p++;S.fx=S.fy=0;render()}},'Vor ▶')));
 if(u.mode==1){box.append(gfx(u,box),el('div',{class:'bar',style:'margin-top:8px'},el('button',{class:'s',onclick:()=>{S.z=Math.max(1,S.z-.5);S.fx=S.fy=0;render()}},'Zoom −'),el('span',{},`Zoom: ${Math.round((S.z-1)*100)} %`),el('button',{class:'s',onclick:()=>{S.z=Math.min(4,S.z+.5);render()}},'Zoom +')));
 /* feste Leiste unten rechts: letzten Pfeil löschen / nächste Passe */
 const dl=async()=>{const p=u.p[S.p]||[];if(!p.length&&S.p>0){S.p--;u.p[S.p].pop()}else p.pop();S.fx=S.fy=0;await save(u);render()};
