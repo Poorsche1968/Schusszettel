@@ -32,3 +32,28 @@ canvas{display:block;margin:auto;touch-action:pan-y}
 @media print{#hd,#nav,.keys,.np{display:none!important}body{background:#fff;color:#000}.box,.card{background:#fff;border:1px solid #999}}
 html,body,button,label,div{touch-action:manipulation}
 .tt{touch-action:none}
+textarea{width:100%;font:inherit}
+.check{display:flex;align-items:center;gap:10px;margin:12px 0}.check input{width:22px;height:22px;flex:none}
+details{margin:12px 0}summary{cursor:pointer;font-weight:600;padding:10px 0}
+.photo-assignment{border-bottom:1px solid #426581;padding:12px 0}
+input[type=number]{min-width:0}a{color:#90c5ff}small{line-height:1.5}
+.row .bs{flex-wrap:wrap}#nav button{font-size:10px}#nav i{font-size:18px}
+#print-sheet{display:none}
+@media print{
+@page{size:A4 portrait;margin:12mm}
+body>*:not(#print-sheet){display:none!important}
+#print-sheet{display:block;font:11pt Arial,sans-serif;color:#000;background:white}
+#print-sheet h1{font-size:20pt}#print-sheet h2{font-size:14pt}
+#print-sheet table{width:100%;border-collapse:collapse;font-size:10pt;table-layout:fixed}
+#print-sheet th,#print-sheet td{border:1px solid #333;padding:5px 2px;text-align:center;height:8mm;overflow-wrap:anywhere}
+#print-sheet thead{display:table-header-group}#print-sheet tr{break-inside:avoid}
+#print-sheet .print-analysis{break-before:page}#print-sheet .box{break-inside:avoid}
+#print-sheet canvas{background:#123a5e;max-width:90mm!important}
+#print-sheet small{color:#333}
+}
+body.print-preview>*:not(#print-sheet){display:none!important}
+body.print-preview #print-sheet{display:block;max-width:800px;padding:20px;margin:auto;background:#fff;color:#111;font:15px Arial,sans-serif}
+#print-sheet table{width:100%;border-collapse:collapse}#print-sheet td,#print-sheet th{border:1px solid #333;text-align:center;padding:5px}
+#print-sheet .print-toolbar{display:flex;gap:10px;margin-bottom:20px}
+#print-sheet .box,#print-sheet .card{background:#fff;color:#111}#print-sheet canvas{background:#123a5e}#print-sheet small{color:#333}
+@media print{body.print-preview #print-sheet{padding:0;max-width:none;font-size:11pt}#print-sheet .print-toolbar{display:none}}
