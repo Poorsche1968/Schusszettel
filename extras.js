@@ -126,7 +126,10 @@ function photoLoupe(ph,W){
 }
 function backupPanel(){
   const stamp=Number(localStorage.bk)||0,stale=!stamp||Date.now()-stamp>14*864e5;
-  return el('section',{class:'box backup-panel'+(stale?' backup-due':''),'aria-label':'Datensicherung'},el('h3',{},'Datensicherung'),
+  const col=localStorage.bkc==='1';
+  const head=el('div',{class:'backup-head'},el('h3',{},'Datensicherung'),el('button',{class:'s backup-toggle','aria-label':col?'Datensicherung aufklappen':'Datensicherung zusammenklappen','aria-expanded':String(!col),onclick:()=>{localStorage.bkc=col?'0':'1';render();}},col?'▾':'▴'));
+  if(col)return el('section',{class:'box backup-panel backup-collapsed'+(stale?' backup-due':''),'aria-label':'Datensicherung'},head);
+  return el('section',{class:'box backup-panel'+(stale?' backup-due':''),'aria-label':'Datensicherung'},head,
     el('p',{},stamp?'Letzte Sicherungsdatei erstellt: '+new Date(stamp).toLocaleString('de-DE'):'Noch keine Sicherungsdatei erstellt.'),
     el('button',{class:'p',onclick:exp},'Jetzt Daten sichern'),
     el('label',{class:'s backup-load'},'Sicherung wiederherstellen',el('input',{type:'file',accept:'.json,application/json',onchange:async e=>{if(e.target.files[0])await restoreBackup(e.target.files[0]);}})),

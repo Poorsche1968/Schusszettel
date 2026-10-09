@@ -91,19 +91,6 @@ body.print-preview #print-sheet{display:block;max-width:800px;padding:20px;margi
 .backup-panel p{margin:8px 0 12px}.backup-due{border:1px solid #d4b451}.backup-load{display:block;margin:10px 0}.backup-load input{margin-top:8px}
 @media print{.photo-loupe{display:none!important}}
 
-/* Keep the app shell stationary; only the main content scrolls on phones. */
-@media screen{
-  html{height:100%;overflow:hidden}
-  body{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;overflow:hidden;display:flex;flex-direction:column}
-  #hd{position:relative;flex:none}
-  #app{flex:1 1 0;min-height:0;width:100%;margin:0 auto;overflow:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;padding-bottom:16px}
-  #nav{position:relative;inset:auto;flex:none;width:100%;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
-  #nav button{min-width:0;min-height:52px}
-  body.print-preview{position:static;display:block;height:100%;overflow:auto}
-}
-
-
-
 /* Keep native iPhone date fields inside their form card. */
 input[type=date]{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;-webkit-appearance:none;appearance:none}
 input[type=date]::-webkit-date-and-time-value{min-width:0;text-align:center}
@@ -118,7 +105,11 @@ input[type=date]::-webkit-date-and-time-value{min-width:0;text-align:center}
 }
 
 @media screen{
- #bottom-dock{position:relative;inset:auto;flex:none;width:100%;z-index:10;background:var(--h);display:flex;flex-direction:column;border-radius:16px 16px 0 0}
+ #bottom-dock{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--h);display:flex;flex-direction:column;border-radius:16px 16px 0 0}
+ #nav{padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
  #bottom-dock #nav{position:relative;inset:auto;flex:none}
- #app,#app.k{padding-bottom:16px!important}
+ #app,#app.k{padding-bottom:calc(var(--dock-height,100px) + 16px)!important}
 }
+
+.backup-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.backup-head h3{margin:0}.backup-toggle{flex:none;width:44px;height:36px;padding:0;font-size:18px;line-height:1}
+.backup-panel:not(.backup-collapsed) .backup-head{margin-bottom:10px}
