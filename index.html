@@ -1,8 +1,12 @@
 <!doctype html><html lang="de"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,maximum-scale=1,user-scalable=no"><meta name="theme-color" content="#0a3a63"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Schusszettel"><title>Schusszettel</title><link rel="manifest" href="manifest.json"><link rel="icon" href="icon.svg" type="image/svg+xml"><link rel="apple-touch-icon" href="icon-180.png"><link rel="stylesheet" href="style.css"></head><body><header id="hd"></header><main id="app"></main><nav id="nav"></nav><script>
 window.addEventListener('error',function(e){reportAppError(e.error&&e.error.stack||e.message||'Unbekannter Fehler',e.filename,e.lineno)});
 window.addEventListener('unhandledrejection',function(e){reportAppError(e.reason&&e.reason.stack||String(e.reason||'Unbekannter Fehler'))});
+var seenErr={};
 function reportAppError(message,file,line){
  console.error(message,file||'',line||'');
+ message=String(message);
+ if(/ResizeObserver loop|^Script error\.?$/.test(message)||seenErr[message])return;
+ seenErr[message]=1;
  var panel=document.getElementById('app-error');
  if(!panel){panel=document.createElement('details');panel.id='app-error';panel.className='np';panel.style.cssText='position:fixed;top:env(safe-area-inset-top);left:8px;right:8px;z-index:99;background:#7a1010;color:white;padding:10px;border-radius:8px;max-height:40vh;overflow:auto;font:13px system-ui';
  var title=document.createElement('summary');title.textContent='Fehlermeldung · Version 12 (Details)';panel.appendChild(title);
