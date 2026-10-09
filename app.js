@@ -93,7 +93,7 @@ el('button',{class:'p',onclick:async()=>{const u={...N,id:Date.now(),title:N.typ
 /* Start */
 const dl=async(n,t)=>{const b=new Blob([t],{type:'application/json'}),f=new File([b],n,{type:'application/json'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f]});}else{const url=URL.createObjectURL(b),a=el('a',{href:url,download:n});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000)}};
 const exp=async()=>{try{const createdAt=new Date().toISOString();await dl(`schusszettel-${today()}.json`,JSON.stringify({v:3,createdAt,units:S.units,clicks:Object.values(S.k),material}));localStorage.bk=Date.now();render()}catch(e){if(e.name!=='AbortError')alert('Sicherung fehlgeschlagen: '+e.message)}};
-function home(box){box.append(el('div',{class:'g'},el('button',{class:'s',onclick:()=>go('trends')},'📈 Trends'),el('button',{class:'s',onclick:()=>go('material')},'🏹 Material')),backupPanel());
+function home(box){box.append(backupPanel());
 box.append(el('div',{class:'g'},[['all','Alle'],['Halle','Halle'],['Freiluft','Freiluft']].map(([v,t])=>el('button',{class:'s'+(S.f==v?' on':''),onclick:()=>{S.f=v;render()}},t))));
 const us=S.units.filter(u=>S.f=='all'||u.place==S.f).sort((a,b)=>b.date.localeCompare(a.date)||b.id-a.id),sh=us.flatMap(shots),ru=[...us].reverse().filter(u=>done(u));
 if(!us.length)box.append(el('div',{class:'box'},'Noch keine Einheiten. Tippe auf „Neu“, um zu starten.'));else{box.append(el('div',{class:'box'},el('h3',{},'Trefferbild'),plot(sh),...charts(sh,ru.map(u=>Math.round(tot(u)/done(u)*100)/100),ru.map(u=>sd(u.date)),'Schnitt je Aufschreiben'),...dayChart(ru)));
@@ -187,7 +187,7 @@ el('div',{class:'cards'},[[sumN(7),'7 Tage'],[sumN(30),'30 Tage'],[all_,'Gesamt'
 el('div',{class:'box'},el('h3',{},'Pfeile pro Tag (14 Tage)'),bar2([...Array(14)].map((_,i)=>cnt(13-i)),[...Array(14)].map((_,i)=>String(back(13-i).getDate())),'#4a90d9'),el('h3',{},'Pfeile nach Uhrzeit'),bar2(hrs,hrs.map((_,i)=>i),'#ffe629',3)),
 el('div',{class:'box'},el('h3',{},'Tage'),days.length?days.slice(0,31).map(d=>el('div',{class:'it'},fmt(d.id),el('b',{},d.n))):'Noch keine Pfeile gezählt.'))}
 /* Navigation */
-const NAV=[['home','🏠','Start'],['new','➕','Neu'],['live','🎯','Live'],['sheet','📋','Zettel'],['klick','🔢','Klicker']];
+const NAV=[['home','🏠','Start'],['new','➕','Neu'],['live','🎯','Live'],['sheet','📋','Zettel'],['klick','🔢','Klicker'],['trends','📈','Trends'],['material','🏹','Material']];
 async function go(v){if(v=='live'&&!S.u)v='new';S.v=v;if((v=='live'||v=='klick')&&'wakeLock'in navigator)try{wl=await navigator.wakeLock.request('screen')}catch{}else if(wl){wl.release();wl=null}render()}
 function render(){document.querySelectorAll('body > .keys,body > .live-actions').forEach(n=>n.remove());document.querySelectorAll('.photo-loupe').forEach(n=>n.remove());const a=$('#app');a.className='';a.style.paddingBottom='';a.innerHTML='';$('#hd').textContent={home:'Schusszettel',new:'Neue Einheit',live:S.u?S.u.title:'Live',sheet:'Zusammenfassung',photo:'Foto auswerten',klick:'Klicker',trends:'Trends',material:'Material'}[S.v];
 if(tEnd){$('#hd').textContent=tt();$('#hd').style.background=hdc()}else $('#hd').style.background='';
