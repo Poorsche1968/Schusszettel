@@ -86,3 +86,7 @@ body.print-preview #print-sheet{display:block;max-width:800px;padding:20px;margi
   #print-sheet table{font-size:12px;table-layout:auto}
   #print-sheet td,#print-sheet th{padding:5px 2px}
 }
+.photo-loupe{position:fixed;z-index:50;width:184px;background:#102d45;color:white;border:2px solid white;border-radius:12px;overflow:hidden;pointer-events:none;box-shadow:0 3px 18px #0008;text-align:center;font-size:13px}
+.photo-loupe canvas{width:180px;height:180px}.photo-loupe div{padding:5px}
+.backup-panel p{margin:8px 0 12px}.backup-due{border:1px solid #d4b451}.backup-load{display:block;margin:10px 0}.backup-load input{margin-top:8px}
+@media print{.photo-loupe{display:none!important}}

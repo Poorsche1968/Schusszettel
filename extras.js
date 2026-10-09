@@ -37,10 +37,10 @@ function groupPanel(u,sh){const g=AppCore.group(sh,u.face);return el('div',{clas
   g.n?el('p',{},'Gruppenmitte: '+nf(g.cx,2)+' cm rechts / '+nf(-g.cy,2)+' cm oben (negative Werte: links / unten).'):null,
   el('details',{},el('summary',{},'Gruppierungsdurchmesser je Passe'),(u.p||[]).map((p,i)=>{const a=AppCore.group(p,u.face);return el('p',{},'Passe '+(i+1)+': '+(a.diameter==null?'–':nf(a.diameter,2)+' cm')+' ('+a.n+' Positionen)')})));
 }
-function arrowAnalysis(units){const groups=new Map();
+function arrowAnalysis(units){const groups=new Map();const comparisons=AppCore.arrowOffsets(units);
   for(const u of units)for(const s of shots(u)){if(!s.arrowId)continue;const key=[u.arrowSet||u.equipment?.arrowSet||'Ohne Set',u.place,u.dist,u.face,u.bow,s.arrowId].join(' · ');const a=groups.get(key)||{u,sh:[]};a.sh.push(s);groups.set(key,a);}
   return el('div',{class:'box'},el('h3',{},'Pfeile über mehrere Passen'),el('small',{},'Vergleich getrennt nach Pfeilset, Ort, Distanz, Auflage und Bogenklasse. Auffällige Werte sind ein Hinweis zur Prüfung des Pfeils.'),
-    groups.size?[...groups].map(([key,{u,sh}])=>{const g=AppCore.group(sh,u.face);return el('div',{class:'it'},el('div',{},key,el('small',{},sh.length+' Treffer · Ø '+nf(sum(sh)/sh.length,2)+' · Streuung '+(g.diameter==null?'–':nf(g.diameter,2)+' cm')),g.n?el('small',{},'Mitte: '+nf(g.cx,1)+' cm rechts / '+nf(-g.cy,1)+' cm oben'):null))}):el('p',{},'Noch keine nummerierten Pfeile.'));
+    el('div',{},comparisons.filter(c=>c.leftRight||c.upDown).map(c=>el('div',{class:'warn'},el('b',{},'Pfeil '+c.id+' wiederholt auffällig'),el('p',{},c.label),el('p',{},c.n+' Passen · '+(c.leftRight?nf(Math.abs(c.mx),1)+' cm '+(c.mx<0?'links':'rechts'):'')+(c.leftRight&&c.upDown?' / ':'')+(c.upDown?nf(Math.abs(c.my),1)+' cm '+(c.my<0?'oben':'unten'):'')+' gegenüber den anderen Pfeilen.')))),el('small',{},'Hinweise ab 3 Passen mit jeweils mindestens 2 Vergleichspfeilen: mindestens 1 cm Abweichung, 75 % gleiche Richtung und mehr als 2 Standardfehler. Keine Schadensdiagnose. Ohne Pfeilset nur Vergleich innerhalb einer Einheit.'),groups.size?[...groups].map(([key,{u,sh}])=>{const g=AppCore.group(sh,u.face);return el('div',{class:'it'},el('div',{},key,el('small',{},sh.length+' Treffer · Ø '+nf(sum(sh)/sh.length,2)+' · Streuung '+(g.diameter==null?'–':nf(g.diameter,2)+' cm')),g.n?el('small',{},'Mitte: '+nf(g.cx,1)+' cm rechts / '+nf(-g.cy,1)+' cm oben'):null))}):el('p',{},'Noch keine nummerierten Pfeile.'));
 }
 let trendFilter={place:'Freiluft',dist:'',bow:'',face:'',from:'',to:'',period:'month'};
 function trendsView(box){const f=trendFilter,b=el('div',{class:'box'},el('h3',{},'Wochen & Monate'));
@@ -63,7 +63,7 @@ function materialView(box){
     [['name','Name'],['string','Sehne'],['drawWeight','Zuggewicht (lbs)'],['stabilizers','Stabilisatoren'],['arrowSet','Pfeilset'],['arrows','Pfeilkonfiguration (Spine, Länge, Spitze)']].forEach(([k,l])=>d.append(field(l,e[k],v=>{e[k]=v;storeMaterial()})));
     d.append(el('button',{class:'s',onclick:()=>{if(confirm('Setup löschen? Gespeicherte Einheiten behalten ihre Materialdaten.')){material.equipment=material.equipment.filter(x=>x!==e);storeMaterial();render()}}},'Setup löschen'));b.append(d)});
   const s=el('div',{class:'box'},el('h3',{},'Visierbuch'),el('button',{class:'s',onclick:()=>{material.sights.push({id:uid(),distance:18,arrowSet:'',mark:'',date:today()});storeMaterial();render()}},'Visiereinstellung hinzufügen'));
-  [...material.sights].sort((a,b)=>a.distance-b.distance||a.arrowSet.localeCompare(b.arrowSet)).forEach(e=>{const d=el('details',{},el('summary',{},e.distance+' m · '+(e.arrowSet||'Pfeilset fehlt')+' · '+e.mark));
+  [...material.sights].sort((a,b)=>a.distance-b.distance||String(a.arrowSet||'').localeCompare(String(b.arrowSet||''))).forEach(e=>{const d=el('details',{},el('summary',{},e.distance+' m · '+(e.arrowSet||'Pfeilset fehlt')+' · '+e.mark));
     [['distance','Distanz (m)','number'],['arrowSet','Pfeilset','text'],['mark','Visiereinstellung','text'],['date','Datum','date'],['notes','Notiz','text']].forEach(([k,l,t])=>d.append(field(l,e[k],v=>{e[k]=v;storeMaterial()},t)));
     d.append(el('button',{class:'s',onclick:()=>{if(confirm('Visiereinstellung löschen?')){material.sights=material.sights.filter(x=>x!==e);storeMaterial();render()}}},'Löschen'));s.append(d)});box.append(b,s);
 }
@@ -87,11 +87,6 @@ function unitDetails(u,box){const b=el('details',{class:'box np'},el('summary',{
   if(u.place==='Freiluft'&&u.date===today())b.append(el('button',{class:'s',onclick:()=>fetchWeather(u)},'Wetter per Standort aktualisieren'));
   box.append(b,groupPanel(u,shots(u)),arrowAnalysis([u]));
 }
-function photoAssignments(u,ph){const b=el('details',{class:'box'},el('summary',{},'Treffer prüfen und Passen zuordnen'));b.open=true;
-  b.append(el('button',{class:'s',onclick:()=>{ph.cand.forEach(d=>d.end='skip');render()}},'Alle auf nicht übernehmen setzen'),el('p',{},'Nur eigene, neu geschossene Pfeile übernehmen. Ein Foto kann mehrere Passen oder fremde Pfeile zeigen. Nummern sind keine automatische Pfeilidentifikation.'));
-  ph.cand.forEach((d,i)=>{const r=el('div',{class:'photo-assignment'},el('b',{},'Treffer '+(i+1)+' · '+keyOf(d)),choice('Zuordnung',d.end??'',[['','Bitte wählen'],['skip','Nicht übernehmen'],...Array.from({length:u.R*u.P},(_,p)=>[p,'Passe '+(p+1)])],v=>d.end=v));
-    if(u.tracking)r.append(choice('Pfeilnummer',d.arrowId||'',[['','Unbekannt'],...arrowIds(u).map(n=>[n,n])],v=>d.arrowId=v));b.append(r)});return b;
-}
 function printSheet(u){
   const old=document.getElementById('print-sheet');if(old)old.remove();
   const out=el('article',{id:'print-sheet'},el('h1',{},'Schusszettel'),el('p',{},[u.competition||u.title,fmt(u.date),u.loc].filter(Boolean).join(' · ')),el('p',{},'Name: '+(u.archer||'________________')+' · Verein: '+(u.club||'________________')),el('p',{},`${u.bow} · ${u.place} · ${u.dist} m · ${u.face} cm · Startnr./Scheibe: ${u.targetNo||'________'}`));
@@ -114,4 +109,49 @@ function printSheet(u){
   if(u.printAnalysis){const a=el('section',{class:'print-analysis'},el('h2',{},'Trefferbild & Auswertung'),LY(u)==='single'?plot(shots(u)):plotL(u,shots(u)),groupPanel(u,shots(u)),...charts(shots(u),pe(u,0).map(q=>q[1]),pe(u,0).map(q=>q[0]),'Passenverlauf'));out.append(a);}
   const toolbar=el('div',{class:'np print-toolbar'},el('button',{class:'s',onclick:()=>window.print()},'Drucken / als PDF speichern'),el('button',{class:'s',onclick:()=>{out.remove();document.body.classList.remove('print-preview')}},'Zurück zur App'));
   out.append(toolbar);document.body.append(out);document.body.classList.add('print-preview');window.scrollTo(0,0);
+}
+
+function photoLoupe(ph,W){
+  const node=el('div',{class:'photo-loupe',role:'img','aria-label':'Vergrößerter Einstich mit Fadenkreuz'}),canvas=el('canvas',{width:180,height:180}),label=el('div');node.append(canvas,label);
+  const ctx=canvas.getContext('2d');
+  return {show(d,clientX,clientY){
+    if(!node.isConnected)document.body.append(node);
+    node.style.left=clientX<innerWidth/2?'auto':'12px';node.style.right=clientX<innerWidth/2?'12px':'auto';
+    node.style.top=clientY<260?'auto':'calc(env(safe-area-inset-top) + 12px)';node.style.bottom=clientY<260?'calc(env(safe-area-inset-bottom) + 80px)':'auto';
+    const scale=ph.img.width/W,X=(ph.cx+d.px*ph.r)*scale,Y=(ph.cy+d.py*ph.r)*scale,size=180*scale/3;
+    ctx.fillStyle='#111';ctx.fillRect(0,0,180,180);ctx.drawImage(ph.img,X-size/2,Y-size/2,size,size,0,0,180,180);
+    for(const [color,width] of [['#000',4],['#fff',2]]){ctx.strokeStyle=color;ctx.lineWidth=width;ctx.beginPath();ctx.moveTo(70,90);ctx.lineTo(110,90);ctx.moveTo(90,70);ctx.lineTo(90,110);ctx.stroke();}
+    label.textContent='3× Lupe · '+keyOf(d);
+  },hide(){node.remove()}};
+}
+function backupPanel(){
+  const stamp=Number(localStorage.bk)||0,stale=!stamp||Date.now()-stamp>14*864e5;
+  return el('section',{class:'box backup-panel'+(stale?' backup-due':''),'aria-label':'Datensicherung'},el('h3',{},'Datensicherung'),
+    el('p',{},stamp?'Letzte Sicherungsdatei erstellt: '+new Date(stamp).toLocaleString('de-DE'):'Noch keine Sicherungsdatei erstellt.'),
+    el('button',{class:'p',onclick:exp},'Jetzt Daten sichern'),
+    el('label',{class:'s backup-load'},'Sicherung wiederherstellen',el('input',{type:'file',accept:'.json,application/json',onchange:async e=>{if(e.target.files[0])await restoreBackup(e.target.files[0]);}})),
+    el('small',{},'Enthält Einheiten, Pfeilnummern, Material, Visierbuch und Klicker. Speichere die JSON-Datei in Dateien oder deiner Cloud und lade sie auf dem neuen Handy. Prüfe, dass die Datei tatsächlich gespeichert wurde.'));
+}
+async function restoreBackup(file){
+  try{
+    const j=AppCore.validateBackup(JSON.parse(await file.text()));
+    if(!confirm(j.units.length+' Einheiten und '+j.clicks.length+' Klickertage importieren? Gleiche Einträge werden ersetzt; andere bleiben erhalten.'))return;
+    const merge=(old,items)=>[...new Map([...old,...items].map(e=>[e.id,e])).values()];
+    const previous=material,next=j.material?{equipment:merge(material.equipment,j.material.equipment),sights:merge(material.sights,j.material.sights)}:material;
+    material=next;try{storeMaterial();const db=await DB;await new Promise((resolve,reject)=>{const t=db.transaction(['u','k'],'readwrite');t.oncomplete=resolve;t.onabort=()=>reject(t.error||Error('Import abgebrochen'));t.onerror=()=>reject(t.error);try{for(const u of j.units)t.objectStore('u').put({...u,p:u.p.map(p=>p||[])});for(const k of j.clicks)t.objectStore('k').put(k);}catch(e){t.abort();reject(e);}});}
+    catch(e){material=previous;storeMaterial();throw e;}
+    S.units=await all();S.k=Object.fromEntries((await allK()).map(k=>[k.id,k]));S.u=null;S.ph=null;S.v='home';render();alert('Sicherung wiederhergestellt.');
+  }catch(e){alert(e.message||'Die Datei konnte nicht importiert werden.');}
+}
+function photoAssignments(u,ph){
+  const selected=ph.cand.filter(d=>d.owned),b=el('div',{class:'box'},el('h3',{},ph.stage==='assign'?'2. Passen zuordnen':'1. Eigene Pfeile auswählen'));
+  b.append(el('p',{},selected.length+' eigene Pfeile von '+ph.cand.length+' Vorschlägen ausgewählt.'));
+  if(ph.stage!=='assign'){
+    b.append(el('p',{},'Tippe deine Pfeile im Foto an oder wähle sie hier. Fremde und bereits erfasste Pfeile nicht markieren.'),el('button',{class:'s',onclick:()=>{ph.cand.forEach(d=>d.owned=false);render()}},'Auswahl aufheben'));
+    ph.cand.forEach((d,i)=>b.append(check('Treffer '+(i+1)+' · '+keyOf(d),d.owned,v=>{d.owned=v;render()})));
+    b.append(el('button',{class:'p',disabled:!selected.length,onclick:()=>{ph.stage='assign';ph.pan=false;render()}},'Auswahl bestätigen und Passen zuordnen'));return b;
+  }
+  b.append(el('button',{class:'s',onclick:()=>{ph.stage='select';render()}},'Eigene Pfeile erneut auswählen'));
+  ph.cand.forEach((d,i)=>{if(!d.owned)return;const row=el('div',{class:'photo-assignment'},el('b',{},'Treffer '+(i+1)+' · '+keyOf(d)),choice('Passe für Treffer '+(i+1),d.end??'',[['','Bitte wählen'],...Array.from({length:u.R*u.P},(_,p)=>[p,'Passe '+(p+1)+' ('+(u.p[p]||[]).length+'/'+u.A+')'])],v=>d.end=v));
+    if(u.tracking)row.append(choice('Pfeilnummer für Treffer '+(i+1),d.arrowId||'',[['','Unbekannt'],...arrowIds(u).map(n=>[n,n])],v=>d.arrowId=v));b.append(row);});return b;
 }

@@ -1,0 +1,18 @@
+const assert=require('node:assert/strict'),C=require('./core.js');
+const unit={id:1,date:'2026-10-09',mode:1,face:122,dist:70,bow:'Recurve',place:'Freiluft',R:1,P:6,A:6,p:[],arrowSet:'A'};
+const p=(id,x,y=0)=>({arrowId:id,px:x,py:y,v:9,x:0});
+const ends=Array.from({length:6},(_,i)=>[p('1',i*.1),p('2',i*.1),p('3',i*.1),p('4',i*.1-.05),p('5',i*.1),p('6',i*.1)]);
+const comparisons=C.arrowOffsets([{...unit,p:ends}]);
+assert.equal(comparisons.filter(c=>c.leftRight).length,1);assert.equal(comparisons.find(c=>c.leftRight).id,'4');assert.ok(comparisons.find(c=>c.leftRight).mx<0);
+assert.equal(C.arrowOffsets([{...unit,p:ends.slice(0,2)}]).filter(c=>c.leftRight).length,0);
+assert.equal(C.arrowOffsets([{...unit,p:ends.map(e=>e.map(s=>({...s,px:.2})))}]).filter(c=>c.leftRight||c.upDown).length,0);
+const own=Array.from({length:15},(_,i)=>({...p(String(i%6),.1),owned:i<12,end:Math.floor(i/6)}));
+assert.deepEqual(C.photoPlan(unit,own).map(p=>p.length),[6,6,0,0,0,0]);assert.equal(unit.p.length,0);
+assert.throws(()=>C.photoPlan(unit,[{...p('1',0),owned:true}]),/zuordnen/);
+assert.throws(()=>C.photoPlan(unit,own.map(p=>({...p,end:0}))),/voll/);
+const backup={v:3,units:[{...unit,p:ends}],clicks:[],material:{equipment:[],sights:[]}};
+assert.equal(C.validateBackup(JSON.parse(JSON.stringify(backup))).units.length,1);
+assert.throws(()=>C.validateBackup({...backup,units:[{...unit,p:[[{v:99,x:0}]]}]}),/Ungültige/);
+assert.throws(()=>C.validateBackup({v:3,units:[unit],clicks:[{id:'bad'}]}),/Ungültige/);
+for(const v of [1,2])assert.equal(C.validateBackup({...backup,v}).v,v);
+console.log('Version 4: comparison, minimum samples, sight drift, 15-candidate selection, atomic overflow, backup compatibility and invalid input passed.');
