@@ -103,3 +103,7 @@ body.print-preview #print-sheet{display:block;max-width:800px;padding:20px;margi
 }
 
 @media screen{body:not(.print-preview){top:var(--app-top,0px);bottom:auto;height:var(--app-height,100%)} }
+
+/* Keep native iPhone date fields inside their form card. */
+input[type=date]{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;-webkit-appearance:none;appearance:none}
+input[type=date]::-webkit-date-and-time-value{min-width:0;text-align:center}
