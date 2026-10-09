@@ -189,10 +189,10 @@ el('div',{class:'box'},el('h3',{},'Tage'),days.length?days.slice(0,31).map(d=>el
 /* Navigation */
 const NAV=[['home','🏠','Start'],['new','➕','Neu'],['live','🎯','Live'],['sheet','📋','Zettel'],['klick','🔢','Klicker'],['trends','📈','Trends'],['material','🏹','Material']];
 async function go(v){if(v=='live'&&!S.u)v='new';S.v=v;if((v=='live'||v=='klick')&&'wakeLock'in navigator)try{wl=await navigator.wakeLock.request('screen')}catch{}else if(wl){wl.release();wl=null}render()}
-function render(){document.querySelectorAll('body > .keys,body > .live-actions').forEach(n=>n.remove());document.querySelectorAll('.photo-loupe').forEach(n=>n.remove());const a=$('#app');a.className='';a.style.paddingBottom='';a.innerHTML='';$('#hd').textContent={home:'Schusszettel',new:'Neue Einheit',live:S.u?S.u.title:'Live',sheet:'Zusammenfassung',photo:'Foto auswerten',klick:'Klicker',trends:'Trends',material:'Material'}[S.v];
+function render(){document.querySelectorAll('#bottom-dock > .keys,#bottom-dock > .live-actions').forEach(n=>n.remove());document.querySelectorAll('.photo-loupe').forEach(n=>n.remove());const a=$('#app');a.className='';a.style.paddingBottom='';a.innerHTML='';$('#hd').textContent={home:'Schusszettel',new:'Neue Einheit',live:S.u?S.u.title:'Live',sheet:'Zusammenfassung',photo:'Foto auswerten',klick:'Klicker',trends:'Trends',material:'Material'}[S.v];
 if(tEnd){$('#hd').textContent=tt();$('#hd').style.background=hdc()}else $('#hd').style.background='';
 $('#nav').replaceChildren(...NAV.map(([v,i,t])=>el('button',{class:S.v==v?'on':'',onclick:()=>go(v)},el('i',{},i),t)));
-({home,new:neu,live:b=>S.u?live(S.u,b):neu(b),sheet:zettel,photo:b=>photo(S.u,b),klick,trends:trendsView,material:materialView})[S.v](a);const controls=a.querySelector('.keys,.live-actions');if(controls){document.body.insertBefore(controls,$('#nav'));a.style.paddingBottom='16px';}}
+({home,new:neu,live:b=>S.u?live(S.u,b):neu(b),sheet:zettel,photo:b=>photo(S.u,b),klick,trends:trendsView,material:materialView})[S.v](a);const controls=a.querySelector('.keys,.live-actions');if(controls){$('#bottom-dock').insertBefore(controls,$('#nav'));}}
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState=='visible'&&S.v=='live'&&'wakeLock'in navigator)try{wl=await navigator.wakeLock.request('screen')}catch{}});
 if('serviceWorker'in navigator){
  let refreshing=false;
@@ -208,16 +208,9 @@ all().then(u=>{S.units=u;return allK()}).then(k=>{k.forEach(r=>S.k[r.id]=r);rend
 
 ['gesturestart','gesturechange','dblclick'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
 
-// Follow the visible viewport when iOS restores or resizes a standalone app.
-function fitAppViewport(){
- const view=window.visualViewport;
- if(view&&Math.abs(view.scale-1)>.01)return;
- const height=view?view.height:window.innerHeight;
- if(height>0){document.documentElement.style.setProperty('--app-height',height+'px');document.documentElement.style.setProperty('--app-top',(view?view.offsetTop:0)+'px');}
-}
-fitAppViewport();
-window.addEventListener('resize',fitAppViewport);
-window.addEventListener('pageshow',fitAppViewport);
-window.visualViewport?.addEventListener('resize',fitAppViewport);
-window.visualViewport?.addEventListener('scroll',fitAppViewport);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)fitAppViewport()});
+// Navigation and live controls share one viewport-anchored dock.
+const bottomDock=el('div',{id:'bottom-dock',class:'np'});
+document.body.append(bottomDock);bottomDock.append($('#nav'));
+const measureDock=()=>document.documentElement.style.setProperty('--dock-height',bottomDock.getBoundingClientRect().height+'px');
+new ResizeObserver(measureDock).observe(bottomDock);
+measureDock();

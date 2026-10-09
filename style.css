@@ -102,7 +102,7 @@ body.print-preview #print-sheet{display:block;max-width:800px;padding:20px;margi
   body.print-preview{position:static;display:block;height:100%;overflow:auto}
 }
 
-@media screen{body:not(.print-preview){top:var(--app-top,0px);bottom:auto;height:var(--app-height,100%)} }
+
 
 /* Keep native iPhone date fields inside their form card. */
 input[type=date]{display:block;width:100%;max-width:100%;min-width:0;box-sizing:border-box;-webkit-appearance:none;appearance:none}
@@ -112,7 +112,13 @@ input[type=date]::-webkit-date-and-time-value{min-width:0;text-align:center}
 @media screen{
  #nav button{flex:1 1 0;min-height:64px;font-size:12px;padding:10px 0 8px;line-height:1.25}
  #nav i{font-size:22px;margin-bottom:3px}
- body>.keys,body>.live-actions{position:relative;inset:auto;flex:none;width:100%;z-index:6;background:var(--h);padding:10px; border-radius:16px 16px 0 0}
+ #bottom-dock>.keys,#bottom-dock>.live-actions{position:relative;inset:auto;flex:none;width:100%;z-index:6;background:var(--h);padding:10px; border-radius:16px 16px 0 0}
  .live-actions{display:flex;justify-content:flex-end;gap:8px}
- body>.keys{max-height:45vh;overflow:auto}
+ #bottom-dock>.keys{max-height:45vh;overflow:auto}
+}
+
+@media screen{
+ #bottom-dock{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--h);display:flex;flex-direction:column;border-radius:16px 16px 0 0}
+ #bottom-dock #nav{position:relative;inset:auto;flex:none}
+ #app,#app.k{padding-bottom:calc(var(--dock-height,100px) + 16px)!important}
 }
