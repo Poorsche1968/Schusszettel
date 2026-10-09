@@ -192,7 +192,7 @@ async function go(v){if(v=='live'&&!S.u)v='new';S.v=v;if((v=='live'||v=='klick')
 function render(){document.querySelectorAll('#bottom-dock > .keys,#bottom-dock > .live-actions').forEach(n=>n.remove());document.querySelectorAll('.photo-loupe').forEach(n=>n.remove());const a=$('#app');a.className='';a.style.paddingBottom='';a.innerHTML='';$('#hd').textContent={home:'Schusszettel',new:'Neue Einheit',live:S.u?S.u.title:'Live',sheet:'Zusammenfassung',photo:'Foto auswerten',klick:'Klicker',trends:'Trends',material:'Material'}[S.v];
 if(tEnd){$('#hd').textContent=tt();$('#hd').style.background=hdc()}else $('#hd').style.background='';
 $('#nav').replaceChildren(...NAV.map(([v,i,t])=>el('button',{class:S.v==v?'on':'',onclick:()=>go(v)},el('i',{},i),t)));
-({home,new:neu,live:b=>S.u?live(S.u,b):neu(b),sheet:zettel,photo:b=>photo(S.u,b),klick,trends:trendsView,material:materialView})[S.v](a);const controls=a.querySelector('.keys,.live-actions');if(controls){$('#bottom-dock').insertBefore(controls,$('#nav'));}}
+({home,new:neu,live:b=>S.u?live(S.u,b):neu(b),sheet:zettel,photo:b=>photo(S.u,b),klick,trends:trendsView,material:materialView})[S.v](a);const controls=a.querySelector('.keys,.live-actions');if(controls){$('#bottom-dock').insertBefore(controls,$('#nav'));}scheduleDockMeasure();}
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState=='visible'&&S.v=='live'&&'wakeLock'in navigator)try{wl=await navigator.wakeLock.request('screen')}catch{}});
 if('serviceWorker'in navigator){
  let refreshing=false;
@@ -211,6 +211,15 @@ all().then(u=>{S.units=u;return allK()}).then(k=>{k.forEach(r=>S.k[r.id]=r);rend
 // Navigation and live controls share one viewport-anchored dock.
 const bottomDock=el('div',{id:'bottom-dock',class:'np'});
 document.body.append(bottomDock);bottomDock.append($('#nav'));
-const measureDock=()=>document.documentElement.style.setProperty('--dock-height',bottomDock.getBoundingClientRect().height+'px');
-new ResizeObserver(measureDock).observe(bottomDock);
-measureDock();
+let dockFrame=0,lastDockHeight=-1;
+function scheduleDockMeasure(){
+ if(dockFrame)return;
+ dockFrame=requestAnimationFrame(()=>{
+  dockFrame=0;const height=Math.ceil(bottomDock.getBoundingClientRect().height);
+  if(height!==lastDockHeight){lastDockHeight=height;document.documentElement.style.setProperty('--dock-height',height+'px');}
+ });
+}
+window.addEventListener('resize',scheduleDockMeasure);
+window.addEventListener('pageshow',scheduleDockMeasure);
+document.fonts?.ready.then(scheduleDockMeasure);
+scheduleDockMeasure();
