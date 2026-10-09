@@ -113,3 +113,10 @@ input[type=date]::-webkit-date-and-time-value{min-width:0;text-align:center}
 
 .backup-head{display:flex;align-items:center;justify-content:space-between;gap:10px}.backup-head h3{margin:0}.backup-toggle{flex:none;width:44px;height:36px;padding:0;font-size:18px;line-height:1}
 .backup-panel:not(.backup-collapsed) .backup-head{margin-bottom:10px}
+
+.sw{position:relative;overflow:hidden;border-bottom:1px solid #1d4a73}
+.sw .it{border-bottom:0}
+.sw-fg{position:relative;background:var(--c);touch-action:pan-y;transition:transform .22s ease}
+.sw-fg.drag{transition:none}
+.sw-del{position:absolute;top:0;right:0;bottom:0;left:0;display:none;align-items:center;justify-content:flex-end;padding:0 24px 0 0;background:#e5372f;color:#fff;border:0;border-radius:0;font:600 16px -apple-system,system-ui,sans-serif}
+.sw[data-gone]{transition:height .28s ease,opacity .28s ease;pointer-events:none}
