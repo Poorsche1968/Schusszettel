@@ -94,7 +94,7 @@ body.print-preview #print-sheet{display:block;max-width:800px;padding:20px;margi
 /* Keep the app shell stationary; only the main content scrolls on phones. */
 @media screen{
   html{height:100%;overflow:hidden}
-  body{position:fixed;inset:0;height:auto;overflow:hidden;display:flex;flex-direction:column}
+  body{position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;overflow:hidden;display:flex;flex-direction:column}
   #hd{position:relative;flex:none}
   #app{flex:1 1 0;min-height:0;width:100%;margin:0 auto;overflow:auto;overscroll-behavior-y:contain;-webkit-overflow-scrolling:touch;padding-bottom:16px}
   #nav{position:relative;inset:auto;flex:none;width:100%;padding-left:env(safe-area-inset-left);padding-right:env(safe-area-inset-right)}
@@ -118,7 +118,7 @@ input[type=date]::-webkit-date-and-time-value{min-width:0;text-align:center}
 }
 
 @media screen{
- #bottom-dock{position:fixed;left:0;right:0;bottom:0;z-index:10;background:var(--h);display:flex;flex-direction:column;border-radius:16px 16px 0 0}
+ #bottom-dock{position:relative;inset:auto;flex:none;width:100%;z-index:10;background:var(--h);display:flex;flex-direction:column;border-radius:16px 16px 0 0}
  #bottom-dock #nav{position:relative;inset:auto;flex:none}
- #app,#app.k{padding-bottom:calc(var(--dock-height,100px) + 16px)!important}
+ #app,#app.k{padding-bottom:16px!important}
 }
