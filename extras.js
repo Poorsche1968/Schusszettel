@@ -21,7 +21,7 @@ function extraNew(box){
     field('Schütze / Schützin',N.archer,v=>N.archer=v),field('Verein',N.club,v=>N.club=v),
     field('Wettkampf / Klasse',N.competition,v=>N.competition=v),field('Startnummer / Scheibe',N.targetNo,v=>N.targetNo=v),
     field('Trainingsnotizen',N.notes,v=>N.notes=v),field('Timer je Passe (Sekunden)',N.timerSeconds||240,v=>N.timerSeconds=Math.max(10,Math.min(600,v)),'number'));
-  if(N.place==='Freiluft')b.append(check('Wetter beim Start per Standort abrufen',N.autoWeather,v=>N.autoWeather=v),el('small',{},'Der Browser fragt nach Standortzugriff. Koordinaten werden zum Wetterabruf an Open-Meteo übermittelt.'));
+
   box.insertBefore(b,box.lastElementChild);
 }
 function arrowIds(u){return [...new Set((u.arrowLabels||'1,2,3,4,5,6').split(',').map(s=>s.trim()).filter(Boolean))];}
