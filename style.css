@@ -57,3 +57,32 @@ body.print-preview #print-sheet{display:block;max-width:800px;padding:20px;margi
 #print-sheet .print-toolbar{display:flex;gap:10px;margin-bottom:20px}
 #print-sheet .box,#print-sheet .card{background:#fff;color:#111}#print-sheet canvas{background:#123a5e}#print-sheet small{color:#333}
 @media print{body.print-preview #print-sheet{padding:0;max-width:none;font-size:11pt}#print-sheet .print-toolbar{display:none}}
+/* Version 2: compact scorecard; analysis keeps its separate page. */
+#print-sheet .print-footer{break-inside:avoid;page-break-inside:avoid}
+#print-sheet .print-signatures{display:flex;gap:12mm;margin-top:5mm}
+#print-sheet .print-signatures p{flex:1;margin:0}
+#print-sheet .print-signatures span{display:block;border-top:1px solid #333;margin-top:9mm;padding-top:1mm;font-size:9pt}
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  html,body,body.print-preview{background:#fff!important;color:#000!important;margin:0!important;padding:0!important}
+  body.print-preview #print-sheet,#print-sheet{margin:0!important;padding:0!important;width:100%;max-width:none;font:10pt/1.2 Arial,sans-serif}
+  #print-sheet h1{margin:0 0 3mm;font-size:18pt;line-height:1.1}
+  #print-sheet>p{margin:0 0 2mm;line-height:1.2}
+  #print-sheet h2{margin:3mm 0 2mm;font-size:12pt;line-height:1.2;break-after:avoid}
+  #print-sheet table{table-layout:auto;font-size:9.5pt;margin:0}
+  #print-sheet th,#print-sheet td{height:6mm;padding:1mm 1.2mm;border:.25mm solid #333;white-space:nowrap;overflow-wrap:normal;line-height:1.15}
+  #print-sheet th{font-size:9pt}
+  #print-sheet .print-footer>p{margin:3mm 0 0}
+  #print-sheet .print-signatures{margin-top:4mm}
+  #print-sheet .print-toolbar{display:none!important;margin:0!important;padding:0!important;height:0!important}
+}
+@media screen{
+  body.print-preview #print-sheet{padding-top:calc(20px + env(safe-area-inset-top));padding-bottom:calc(110px + env(safe-area-inset-bottom))}
+  #print-sheet .print-toolbar{position:fixed;left:0;right:0;bottom:0;z-index:20;margin:0;padding:12px max(12px, env(safe-area-inset-left)) calc(12px + env(safe-area-inset-bottom));background:#fff;border-top:1px solid #d3dce4;box-shadow:0 -2px 10px #0001;gap:10px;justify-content:center}
+  #print-sheet .print-toolbar button{flex:1;max-width:360px;min-height:48px;font-size:15px;padding:10px;white-space:normal}
+}
+@media screen and (max-width:600px){
+  body.print-preview #print-sheet{padding-left:12px;padding-right:12px}
+  #print-sheet table{font-size:12px;table-layout:auto}
+  #print-sheet td,#print-sheet th{padding:5px 2px}
+}

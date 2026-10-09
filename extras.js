@@ -109,10 +109,9 @@ function printSheet(u){
     table.append(body);out.append(el('h2',{},'Durchgang '+(round+1)),table);
     if(u.mode===4)out.append(el('p',{},'Durchgangssumme: '+(u.sums[round]??'________')));
   }
-  out.append(el('p',{},'Gesamtergebnis: '+tot(u)+' / '+mx(u)+' · Erfasst: '+done(u)+' / '+u.R*u.P*u.A+' Pfeile'),el('p',{},'Unterschrift Schütze/Schützin: ____________________'),el('p',{},'Unterschrift Schreiber/in: ________________________'));
+  out.append(el('div',{class:'print-footer'},el('p',{},'Gesamtergebnis: '+tot(u)+' / '+mx(u)+' · Erfasst: '+done(u)+' / '+u.R*u.P*u.A+' Pfeile'),el('div',{class:'print-signatures'},el('p',{},'Schütze/Schützin',el('span',{},'Unterschrift')),el('p',{},'Schreiber/in',el('span',{},'Unterschrift')))));
   if(u.mode>2)out.append(el('p',{},'Nur Summen erfasst; Einzelwerte und Trefferzählungen sind nicht vollständig dokumentiert.'));
   if(u.printAnalysis){const a=el('section',{class:'print-analysis'},el('h2',{},'Trefferbild & Auswertung'),LY(u)==='single'?plot(shots(u)):plotL(u,shots(u)),groupPanel(u,shots(u)),...charts(shots(u),pe(u,0).map(q=>q[1]),pe(u,0).map(q=>q[0]),'Passenverlauf'));out.append(a);}
   const toolbar=el('div',{class:'np print-toolbar'},el('button',{class:'s',onclick:()=>window.print()},'Drucken / als PDF speichern'),el('button',{class:'s',onclick:()=>{out.remove();document.body.classList.remove('print-preview')}},'Zurück zur App'));
-  out.prepend(toolbar);document.body.append(out);document.body.classList.add('print-preview');window.scrollTo(0,0);
+  out.append(toolbar);document.body.append(out);document.body.classList.add('print-preview');window.scrollTo(0,0);
 }
-
