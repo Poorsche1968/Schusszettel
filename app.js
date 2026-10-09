@@ -194,7 +194,30 @@ if(tEnd){$('#hd').textContent=tt();$('#hd').style.background=hdc()}else $('#hd')
 $('#nav').replaceChildren(...NAV.map(([v,i,t])=>el('button',{class:S.v==v?'on':'',onclick:()=>go(v)},el('i',{},i),t)));
 ({home,new:neu,live:b=>S.u?live(S.u,b):neu(b),sheet:zettel,photo:b=>photo(S.u,b),klick,trends:trendsView,material:materialView})[S.v](a)}
 document.addEventListener('visibilitychange',async()=>{if(document.visibilityState=='visible'&&S.v=='live'&&'wakeLock'in navigator)try{wl=await navigator.wakeLock.request('screen')}catch{}});
-if('serviceWorker'in navigator)navigator.serviceWorker.register('sw.js');
+if('serviceWorker'in navigator){
+ let refreshing=false;
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{
+  if(!refreshing&&S.v==='home'){refreshing=true;location.reload();}
+ });
+ navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+  reg.update().catch(()=>{});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)reg.update().catch(()=>{})});
+ }).catch(()=>{});
+}
 all().then(u=>{S.units=u;return allK()}).then(k=>{k.forEach(r=>S.k[r.id]=r);render()});
 
 ['gesturestart','gesturechange','dblclick'].forEach(t=>document.addEventListener(t,e=>e.preventDefault()));
+
+// Follow the visible viewport when iOS restores or resizes a standalone app.
+function fitAppViewport(){
+ const view=window.visualViewport;
+ if(view&&Math.abs(view.scale-1)>.01)return;
+ const height=view?view.height:window.innerHeight;
+ if(height>0){document.documentElement.style.setProperty('--app-height',height+'px');document.documentElement.style.setProperty('--app-top',(view?view.offsetTop:0)+'px');}
+}
+fitAppViewport();
+window.addEventListener('resize',fitAppViewport);
+window.addEventListener('pageshow',fitAppViewport);
+window.visualViewport?.addEventListener('resize',fitAppViewport);
+window.visualViewport?.addEventListener('scroll',fitAppViewport);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)fitAppViewport()});
