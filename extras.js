@@ -37,10 +37,49 @@ function groupPanel(u,sh){const g=AppCore.group(sh,u.face);return el('div',{clas
   g.n?el('p',{},'Gruppenmitte: '+nf(g.cx,2)+' cm rechts / '+nf(-g.cy,2)+' cm oben (negative Werte: links / unten).'):null,
   el('details',{},el('summary',{},'Gruppierungsdurchmesser je Passe'),(u.p||[]).map((p,i)=>{const a=AppCore.group(p,u.face);return el('p',{},'Passe '+(i+1)+': '+(a.diameter==null?'–':nf(a.diameter,2)+' cm')+' ('+a.n+' Positionen)')})));
 }
-function arrowAnalysis(units){const groups=new Map();const comparisons=AppCore.arrowOffsets(units);
-  for(const u of units)for(const s of shots(u)){if(!s.arrowId)continue;const key=[u.arrowSet||u.equipment?.arrowSet||'Ohne Set',u.place,u.dist,u.face,u.bow,s.arrowId].join(' · ');const a=groups.get(key)||{u,sh:[]};a.sh.push(s);groups.set(key,a);}
-  return el('div',{class:'box'},el('h3',{},'Pfeile über mehrere Passen'),el('small',{},'Vergleich getrennt nach Pfeilset, Ort, Distanz, Auflage und Bogenklasse. Auffällige Werte sind ein Hinweis zur Prüfung des Pfeils.'),
-    el('div',{},comparisons.filter(c=>c.leftRight||c.upDown).map(c=>el('div',{class:'warn'},el('b',{},'Pfeil '+c.id+' wiederholt auffällig'),el('p',{},c.label),el('p',{},c.n+' Passen · '+(c.leftRight?nf(Math.abs(c.mx),1)+' cm '+(c.mx<0?'links':'rechts'):'')+(c.leftRight&&c.upDown?' / ':'')+(c.upDown?nf(Math.abs(c.my),1)+' cm '+(c.my<0?'oben':'unten'):'')+' gegenüber den anderen Pfeilen.')))),el('small',{},'Hinweise ab 3 Passen mit jeweils mindestens 2 Vergleichspfeilen: mindestens 1 cm Abweichung, 75 % gleiche Richtung und mehr als 2 Standardfehler. Keine Schadensdiagnose. Ohne Pfeilset nur Vergleich innerhalb einer Einheit.'),groups.size?[...groups].map(([key,{u,sh}])=>{const g=AppCore.group(sh,u.face);return el('div',{class:'it'},el('div',{},key,el('small',{},sh.length+' Treffer · Ø '+nf(sum(sh)/sh.length,2)+' · Streuung '+(g.diameter==null?'–':nf(g.diameter,2)+' cm')),g.n?el('small',{},'Mitte: '+nf(g.cx,1)+' cm rechts / '+nf(-g.cy,1)+' cm oben'):null))}):el('p',{},'Noch keine nummerierten Pfeile.'));
+function arrowDecimal(value){return value.toFixed(2).replace('.',',');}
+function arrowContext(g){const u=g.u;return [g.set||('Ohne Set · '+fmt(u.date)+' · '+(u.title||'Einheit')),u.place,u.dist+' m',u.face+' cm',u.bow,{single:'Vollauflage',triple:'3er-Spot',vegas:'Vegas-Spot'}[u.lay||'single']].filter(Boolean).join(' · ');}
+function arrowSpot(g){
+  const ns='http://www.w3.org/2000/svg',svg=document.createElementNS(ns,'svg');
+  const positioned=g.shots.filter(s=>Number.isFinite(s.px)&&Number.isFinite(s.py));
+  const spot=(g.u.lay||'single')!=='single',edge=spot ? .5 : 1;
+  // Expand the view for misses; never invent a position for score-only entries.
+  const extent=positioned.reduce((m,s)=>Math.max(m,Math.abs(s.px),Math.abs(s.py)),edge)+.06;
+  svg.setAttribute('viewBox',[-extent,-extent,extent*2,extent*2].join(' '));
+  svg.setAttribute('role','img');svg.setAttribute('aria-label','Pfeil '+g.id+': '+positioned.length+' Einschläge');
+  const add=(tag,attrs,text)=>{const n=document.createElementNS(ns,tag);Object.entries(attrs).forEach(([k,v])=>n.setAttribute(k,v));if(text)n.textContent=text;svg.append(n);};
+  add('title',{},'Alle erfassten Trefferpositionen von Pfeil '+g.id);
+  const colors=['#ffe629','#ffe629','#e8332a','#e8332a','#3fb5cc','#3fb5cc','#111','#111','#fff','#fff'];
+  for(let ring=spot?5:10;ring>=1;ring--)add('circle',{cx:0,cy:0,r:ring/10,fill:colors[ring-1],stroke:ring===7||ring===8?'#ddd':'#333','stroke-width':.004});
+  add('circle',{cx:0,cy:0,r:.05,fill:'none',stroke:'#555','stroke-width':.003});
+  for(const [x,y] of [[edge,0],[0,edge],[edge*.707,edge*.707],[edge*.707,-edge*.707]])add('line',{x1:-x,y1:-y,x2:x,y2:y,stroke:'#fff','stroke-width':.006,opacity:.8});
+  positioned.forEach(s=>add('circle',{cx:s.px,cy:s.py,r:extent*.033,fill:'#111',stroke:'#fff','stroke-width':extent*.010,opacity:.85}));
+  return svg;
+}
+function arrowCard(g,context=false){
+  const stats=g.group;
+  return el('section',{class:'arrow-card'},el('h4',{},'Pfeil-Nr. '+g.id),context?el('small',{class:'arrow-context'},arrowContext(g)):null,
+    arrowSpot(g),el('div',{class:'arrow-metrics'},el('b',{},'Schnitt: '+arrowDecimal(g.average)),
+    el('span',{},'Gruppengröße: '+(stats.diameter==null?'–':arrowDecimal(stats.diameter)+' cm')),
+    el('small',{},g.shots.length+' Treffer · '+stats.n+' mit Position'),
+    stats.n<2?el('small',{},stats.n?'Gruppe ab 2 Positionen':'Keine Trefferpositionen erfasst'):null));
+}
+function arrowPrintPages(u){
+  const cohorts=new Map();
+  for(const g of AppCore.arrowGroups([u])){if(!cohorts.has(g.cohort))cohorts.set(g.cohort,[]);cohorts.get(g.cohort).push(g);}
+  const pages=[];
+  for(const groups of cohorts.values())for(let i=0;i<groups.length;i+=12){
+    pages.push(el('section',{class:'print-arrow-page'},el('h2',{},'Pfeilanalyse · '+(i/12+1)+' / '+Math.ceil(groups.length/12)),
+      el('p',{},'Name: '+(u.archer||'________________')+' · Datum: '+fmt(u.date)),
+      el('p',{},arrowContext(groups[0])),
+      el('div',{class:'arrow-grid'},groups.slice(i,i+12).map(g=>arrowCard(g))),
+      el('small',{class:'arrow-legend'},'Gruppengröße = größter Abstand zwischen zwei Treffermitten. Schnitt aus allen zugeordneten Ringwerten (X = 10, M = 0). Nur erfasste Positionen werden eingezeichnet.')));
+  }
+  return pages;
+}
+function arrowAnalysis(units){const groups=AppCore.arrowGroups(units);const comparisons=AppCore.arrowOffsets(units);
+  return el('div',{class:'box'},el('h3',{},'Pfeile über mehrere Passen'),el('small',{},'Alle Einschläge je Pfeilnummer, getrennt nach Pfeilset, Ort, Distanz, Auflage, Spot-Variante und Bogenklasse. Ohne Set bleiben Einheiten getrennt. Auffällige Werte sind ein Hinweis zur Prüfung des Pfeils.'),
+    el('div',{},comparisons.filter(c=>c.leftRight||c.upDown).map(c=>el('div',{class:'warn'},el('b',{},'Pfeil '+c.id+' wiederholt auffällig'),el('p',{},c.label),el('p',{},c.n+' Passen · '+(c.leftRight?nf(Math.abs(c.mx),1)+' cm '+(c.mx<0?'links':'rechts'):'')+(c.leftRight&&c.upDown?' / ':'')+(c.upDown?nf(Math.abs(c.my),1)+' cm '+(c.my<0?'oben':'unten'):'')+' gegenüber den anderen Pfeilen.')))),el('small',{},'Hinweise ab 3 Passen mit jeweils mindestens 2 Vergleichspfeilen: mindestens 1 cm Abweichung, 75 % gleiche Richtung und mehr als 2 Standardfehler. Keine Schadensdiagnose. Ohne Pfeilset nur Vergleich innerhalb einer Einheit.'),groups.length?el('div',{class:'arrow-grid'},groups.map(g=>arrowCard(g,true))):el('p',{},'Noch keine nummerierten Pfeile.'));
 }
 let trendFilter={place:'Freiluft',dist:'',bow:'',face:'',from:'',to:'',period:'month'};
 function trendsView(box){const f=trendFilter,b=el('div',{class:'box'},el('h3',{},'Wochen & Monate'));
@@ -107,6 +146,7 @@ function printSheet(u){
   out.append(el('div',{class:'print-footer'},el('p',{},'Gesamtergebnis: '+tot(u)+' / '+mx(u)+' · Erfasst: '+done(u)+' / '+u.R*u.P*u.A+' Pfeile'),el('div',{class:'print-signatures'},el('p',{},'Schütze/Schützin',el('span',{},'Unterschrift')),el('p',{},'Schreiber/in',el('span',{},'Unterschrift')))));
   if(u.mode>2)out.append(el('p',{},'Nur Summen erfasst; Einzelwerte und Trefferzählungen sind nicht vollständig dokumentiert.'));
   if(u.printAnalysis){const a=el('section',{class:'print-analysis'},el('h2',{},'Trefferbild & Auswertung'),LY(u)==='single'?plot(shots(u)):plotL(u,shots(u)),groupPanel(u,shots(u)),...charts(shots(u),pe(u,0).map(q=>q[1]),pe(u,0).map(q=>q[0]),'Passenverlauf'));out.append(a);}
+  out.append(...arrowPrintPages(u));
   const toolbar=el('div',{class:'np print-toolbar'},el('button',{class:'s',onclick:()=>window.print()},'Drucken / als PDF speichern'),el('button',{class:'s',onclick:()=>{out.remove();document.body.classList.remove('print-preview')}},'Zurück zur App'));
   out.append(toolbar);document.body.append(out);document.body.classList.add('print-preview');window.scrollTo(0,0);
 }

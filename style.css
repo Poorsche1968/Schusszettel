@@ -120,3 +120,27 @@ input[type=date]::-webkit-date-and-time-value{min-width:0;text-align:center}
 .sw-fg.drag{transition:none}
 .sw-del{position:absolute;top:0;right:0;bottom:0;left:0;display:none;align-items:center;justify-content:flex-end;padding:0 24px 0 0;background:#e5372f;color:#fff;border:0;border-radius:0;font:600 16px -apple-system,system-ui,sans-serif}
 .sw[data-gone]{transition:height .28s ease,opacity .28s ease;pointer-events:none}
+
+/* Individual arrows: shared screen/PDF cards, twelve targets per A4 page. */
+.arrow-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:12px 0}
+.arrow-card{min-width:0;border:1px solid #67829b;border-radius:8px;padding:10px;break-inside:avoid;overflow-wrap:anywhere}
+.arrow-card h4{margin:0 0 6px;font-size:16px}
+.arrow-card svg{display:block;width:100%;aspect-ratio:1;background:#fff;border-radius:4px}
+.arrow-context{display:block;margin-bottom:6px}
+.arrow-metrics{display:flex;flex-direction:column;gap:3px;margin-top:6px;font-size:13px}
+.arrow-metrics small{display:block}
+.print-arrow-page{margin-top:28px;color:#111}
+#print-sheet .arrow-card{border-radius:0;border-color:#333}
+#print-sheet .arrow-grid{gap:0}
+@media screen and (max-width:600px){.arrow-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.arrow-card{padding:7px}}
+@media print{
+ #print-sheet .print-arrow-page{break-before:page;margin:0;print-color-adjust:exact;-webkit-print-color-adjust:exact}
+ #print-sheet .print-arrow-page>p{font-size:9pt;margin:1mm 0;overflow-wrap:anywhere}
+ #print-sheet .arrow-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:0;margin:3mm 0 2mm}
+ #print-sheet .arrow-card{padding:1.5mm;break-inside:avoid}
+ #print-sheet .arrow-card h4{font-size:9pt;margin:0 0 1mm}
+ #print-sheet .arrow-card svg{height:40mm;width:100%;border-radius:0}
+ #print-sheet .arrow-metrics{font-size:8pt;line-height:1.15;gap:.5mm;margin-top:1mm}
+ #print-sheet .arrow-metrics small{font-size:7pt;line-height:1.15}
+ #print-sheet .arrow-legend{display:block;font-size:8pt;line-height:1.2}
+}

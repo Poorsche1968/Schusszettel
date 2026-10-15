@@ -51,6 +51,26 @@ const AppCore = (() => {
     }
     return p;
   }
+  // Coordinates are relative to the individual target centre, including triple/vegas.
+  function arrowGroups(units) {
+    const groups = new Map();
+    units.forEach((u, index) => {
+      if (u.mode > 2) return;
+      const set = String(u.arrowSet || u.equipment?.arrowSet || '').trim();
+      const cohort = JSON.stringify([set || ['unit', u.id ?? index], u.place, u.dist, u.face, u.bow, u.lay || 'single']);
+      for (const shot of (u.p || []).flat().filter(Boolean)) {
+        const id = String(shot.arrowId ?? '').trim();
+        if (!id) continue;
+        const key = JSON.stringify([cohort, id]);
+        if (!groups.has(key)) groups.set(key, {id, cohort, set, u, shots:[]});
+        groups.get(key).shots.push(shot);
+      }
+    });
+    return [...groups.values()].map(g => ({...g,
+      average:g.shots.reduce((total,s) => total + (s.x ? 10 : s.v || 0),0)/g.shots.length,
+      group:group(g.shots,g.u.face)
+    })).sort((a,b) => a.cohort.localeCompare(b.cohort) || a.id.localeCompare(b.id,'de',{numeric:true}));
+  }
   function arrowOffsets(units){
     const groups=new Map();
     for(const u of units){
@@ -88,6 +108,6 @@ const AppCore = (() => {
     if(j.material&&(!Array.isArray(j.material.equipment)||!Array.isArray(j.material.sights)||[...j.material.equipment,...j.material.sights].some(e=>!e||typeof e.id!=='string')))fail();
     return j;
   }
-  return {score,group,trends,photoPlan,period,arrowOffsets,validateBackup};
+  return {score,group,trends,photoPlan,period,arrowGroups,arrowOffsets,validateBackup};
 })();
 if(typeof module!=='undefined')module.exports=AppCore;
