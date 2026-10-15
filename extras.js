@@ -68,11 +68,11 @@ function arrowPrintPages(u){
   const cohorts=new Map();
   for(const g of AppCore.arrowGroups([u])){if(!cohorts.has(g.cohort))cohorts.set(g.cohort,[]);cohorts.get(g.cohort).push(g);}
   const pages=[];
-  for(const groups of cohorts.values())for(let i=0;i<groups.length;i+=12){
-    pages.push(el('section',{class:'print-arrow-page'},el('h2',{},'Pfeilanalyse · '+(i/12+1)+' / '+Math.ceil(groups.length/12)),
+  for(const groups of cohorts.values())for(let i=0;i<groups.length;i+=9){
+    pages.push(el('section',{class:'print-arrow-page'},el('h2',{},'Pfeilanalyse · '+(i/9+1)+' / '+Math.ceil(groups.length/9)),
       el('p',{},'Name: '+(u.archer||'________________')+' · Datum: '+fmt(u.date)),
       el('p',{},arrowContext(groups[0])),
-      el('div',{class:'arrow-grid'},groups.slice(i,i+12).map(g=>arrowCard(g))),
+      el('div',{class:'arrow-grid'},groups.slice(i,i+9).map(g=>arrowCard(g))),
       el('small',{class:'arrow-legend'},'Gruppengröße = größter Abstand zwischen zwei Treffermitten. Schnitt aus allen zugeordneten Ringwerten (X = 10, M = 0). Nur erfasste Positionen werden eingezeichnet.')));
   }
   return pages;
